@@ -51,6 +51,220 @@ export const coreModules: Module[] = [
   },
 ];
 
+export type ServiceLine = {
+  name: string;
+  description: string;
+  tags?: string[];
+  featured?: boolean;
+};
+
+export const serviceLines: ServiceLine[] = [
+  {
+    name: "Commercial Cleaning",
+    description:
+      "Daily janitorial, deep cleans, and specialized sanitation with photo-verified quality checks on every completed task.",
+    tags: ["Janitorial", "Deep clean", "Sanitation"],
+    featured: true,
+  },
+  {
+    name: "Security Staffing",
+    description:
+      "Licensed guards, patrol logs, and incident reporting with live shift coverage.",
+  },
+  {
+    name: "Parking Management",
+    description:
+      "Attendants, capacity tracking, and access control across multiple lots.",
+  },
+  {
+    name: "Event Venue Setup",
+    description:
+      "Staging, seating, teardown, and turnover crews scheduled to the minute.",
+  },
+  {
+    name: "Facility Support",
+    description:
+      "Handyman, maintenance, and grounds support dispatched on demand.",
+  },
+];
+
+export type ModuleGroup = {
+  category: string;
+  blurb: string;
+  modules: { name: string; description: string }[];
+};
+
+/** The full AOG OS module catalogue, grouped by domain. */
+export const moduleCatalog: ModuleGroup[] = [
+  {
+    category: "Sales & Customer",
+    blurb: "Win the work and keep customers close.",
+    modules: [
+      {
+        name: "Customer Portal",
+        description:
+          "Self-service booking, invoices, documents, and support in one place.",
+      },
+      {
+        name: "CRM",
+        description:
+          "Leads, pipeline, quotes, and renewal tracking from first touch to signed contract.",
+      },
+      {
+        name: "Contract Management",
+        description:
+          "SLAs, KPIs, pricing, renewals, and approval workflows for every service.",
+      },
+    ],
+  },
+  {
+    category: "Field Operations",
+    blurb: "Every service line, run to the same standard.",
+    modules: [
+      {
+        name: "Facility Management",
+        description:
+          "Buildings, floors, zones, assets, and access instructions per site.",
+      },
+      {
+        name: "Cleaning Operations",
+        description:
+          "Recurring and one-time jobs with QA checklists and photo sign-off.",
+      },
+      {
+        name: "Security Management",
+        description:
+          "Guard tours, patrol routes, incident reports, and occurrence books.",
+      },
+      {
+        name: "Parking Operations",
+        description:
+          "Permits, reservations, violations, and live occupancy tracking.",
+      },
+      {
+        name: "Event Setup",
+        description:
+          "Staffing, floor plans, equipment, teardown, and customer approval.",
+      },
+    ],
+  },
+  {
+    category: "Workforce",
+    blurb: "Get the right people to the right site, on time.",
+    modules: [
+      {
+        name: "Staff Management",
+        description:
+          "Records, certifications, availability, and performance reviews.",
+      },
+      {
+        name: "Scheduling & Dispatch",
+        description:
+          "Drag-and-drop calendars, conflict detection, and live GPS dispatch.",
+      },
+      {
+        name: "Time & Attendance",
+        description:
+          "GPS check-in/out, timesheets, and payroll-ready exports.",
+      },
+      {
+        name: "Mobile Workforce",
+        description:
+          "Offline task lists, QR scans, digital forms, and SOS from the field.",
+      },
+    ],
+  },
+  {
+    category: "Assets & Supply",
+    blurb: "Keep equipment running and shelves stocked.",
+    modules: [
+      {
+        name: "Inventory",
+        description:
+          "Chemicals, PPE, and consumables with stock levels and expiry tracking.",
+      },
+      {
+        name: "Asset Management",
+        description:
+          "Machines, vehicles, and equipment with full maintenance history.",
+      },
+      {
+        name: "Maintenance",
+        description:
+          "Preventive and corrective work orders tied to assets and contractors.",
+      },
+      {
+        name: "Procurement",
+        description:
+          "Purchase requests, suppliers, and purchase-order approvals.",
+      },
+    ],
+  },
+  {
+    category: "Quality & Compliance",
+    blurb: "Prove the work and stay audit-ready.",
+    modules: [
+      {
+        name: "Inspections & QA",
+        description:
+          "Audit forms, random inspections, defects, and corrective actions.",
+      },
+      {
+        name: "Incident Management",
+        description:
+          "Report, escalate, and resolve incidents with photo evidence.",
+      },
+      {
+        name: "Visitor Management",
+        description:
+          "Visitor logs, badges, and access control at every checkpoint.",
+      },
+    ],
+  },
+  {
+    category: "Finance & Insight",
+    blurb: "Turn operations into revenue and reporting.",
+    modules: [
+      {
+        name: "Finance & Billing",
+        description:
+          "Recurring invoices, expenses, purchase orders, and revenue-by-contract.",
+      },
+      {
+        name: "Reports & Dashboards",
+        description:
+          "Executive, operations, and SLA-compliance analytics in real time.",
+      },
+    ],
+  },
+  {
+    category: "Platform",
+    blurb: "The shared foundation under every module.",
+    modules: [
+      {
+        name: "Workflow Engine",
+        description:
+          "Multi-level approvals and a drag-and-drop custom workflow builder.",
+      },
+      {
+        name: "AI Assistant",
+        description:
+          "Staffing forecasts, SLA-risk detection, and auto-generated summaries.",
+      },
+      {
+        name: "Communication Hub",
+        description:
+          "Chat, announcements, and facility ↔ AOG messaging in one thread.",
+      },
+      {
+        name: "Administration",
+        description:
+          "Roles, permissions, multi-tenant workspaces, and audit logs.",
+      },
+    ],
+  },
+];
+
 export type Role = {
   name: string;
   detail: string;

@@ -2,7 +2,7 @@ import Header from "@/components/landing/Header";
 import Hero from "@/components/landing/Hero";
 import VisionSection from "@/components/landing/VisionSection";
 import FeatureShowcase from "@/components/landing/FeatureShowcase";
-import ModulesSection from "@/components/landing/ModulesSection";
+import ServiceLinesSection from "@/components/landing/ServiceLinesSection";
 import RolesSection from "@/components/landing/RolesSection";
 import WorkflowAISection from "@/components/landing/WorkflowAISection";
 import IntegrationsSection from "@/components/landing/IntegrationsSection";
@@ -17,7 +17,7 @@ export default function Home() {
         <Hero />
         <VisionSection />
         <FeatureShowcase />
-        <ModulesSection />
+        <ServiceLinesSection />
         <RolesSection />
         <WorkflowAISection />
         <IntegrationsSection />

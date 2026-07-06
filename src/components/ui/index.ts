@@ -1,5 +1,7 @@
 export { Button, ButtonLink } from "./Button";
 export { Input, PasswordInput } from "./Input";
+export { Textarea } from "./Textarea";
+export { Select } from "./Select";
 export { Checkbox } from "./Checkbox";
 export { Alert } from "./Alert";
 export { Logo } from "./Logo";

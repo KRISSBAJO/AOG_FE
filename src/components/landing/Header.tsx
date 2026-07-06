@@ -4,11 +4,12 @@ import Link from "next/link";
 import { motion } from "motion/react";
 
 const navLinks = [
-  { label: "Platform", href: "#platform" },
-  { label: "Features", href: "#features" },
-  { label: "Modules", href: "#modules" },
-  { label: "Roles", href: "#roles" },
-  { label: "Workflow & AI", href: "#workflow" },
+  { label: "Platform", href: "/#platform" },
+  { label: "Features", href: "/#features" },
+  { label: "Modules", href: "/#modules" },
+  { label: "Roles", href: "/#roles" },
+  { label: "Workflow & AI", href: "/#workflow" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export default function Header() {
@@ -20,7 +21,7 @@ export default function Header() {
       className="sticky top-0 z-50 border-b border-white/10 bg-[#0B1120]/90 backdrop-blur"
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
-        <Link href="#" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <motion.span
             whileHover={{ rotate: -8, scale: 1.08 }}
             transition={{ type: "spring", stiffness: 300, damping: 15 }}
