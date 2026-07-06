@@ -9,6 +9,9 @@ import {
   Wallet,
   BarChart3,
   Settings,
+  BriefcaseBusiness,
+  ClipboardList,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,7 +27,6 @@ export type NavSection = {
   items: NavItem[];
 };
 
-/** Sidebar navigation model. Hrefs point at /dashboard for now. */
 export const navSections: NavSection[] = [
   {
     items: [{ label: "Overview", href: "/dashboard", icon: LayoutDashboard }],
@@ -32,17 +34,19 @@ export const navSections: NavSection[] = [
   {
     title: "Operations",
     items: [
-      { label: "Contracts", href: "/dashboard", icon: FileText, badge: "12" },
-      { label: "Facilities", href: "/dashboard", icon: Building2 },
-      { label: "Cleaning", href: "/dashboard", icon: Sparkles },
-      { label: "Security", href: "/dashboard", icon: ShieldCheck },
-      { label: "Scheduling", href: "/dashboard", icon: CalendarClock },
+      { label: "Customers", href: "/dashboard/customers", icon: BriefcaseBusiness },
+      { label: "Facilities", href: "/dashboard/facilities", icon: Building2 },
+      { label: "Services", href: "/dashboard/services", icon: Sparkles },
+      { label: "Contracts", href: "/dashboard/contracts", icon: FileText },
+      { label: "Service Requests", href: "/dashboard/service-requests", icon: ClipboardList },
+      { label: "Work Orders", href: "/dashboard/work-orders", icon: Wrench },
+      { label: "Scheduling", href: "/dashboard/scheduling", icon: CalendarClock },
     ],
   },
   {
     title: "Workforce & Finance",
     items: [
-      { label: "Staff", href: "/dashboard", icon: Users },
+      { label: "Workforce", href: "/dashboard/workforce", icon: Users },
       { label: "Finance", href: "/dashboard", icon: Wallet },
       { label: "Reports", href: "/dashboard", icon: BarChart3 },
     ],

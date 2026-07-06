@@ -13,7 +13,7 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthGate>
-      <DashboardShell active="Overview">{children}</DashboardShell>
+      <DashboardShell>{children}</DashboardShell>
     </AuthGate>
   );
 }
