@@ -10,8 +10,9 @@ frontend:
     build:
       commands:
         - npm run build
+        - npm run amplify:static
   artifacts:
-    baseDirectory: out
+    baseDirectory: .amplify-hosting
     files:
       - "**/*"
   cache:
