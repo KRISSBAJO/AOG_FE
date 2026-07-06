@@ -1,0 +1,29 @@
+import Header from "@/components/landing/Header";
+import Hero from "@/components/landing/Hero";
+import VisionSection from "@/components/landing/VisionSection";
+import FeatureShowcase from "@/components/landing/FeatureShowcase";
+import ModulesSection from "@/components/landing/ModulesSection";
+import RolesSection from "@/components/landing/RolesSection";
+import WorkflowAISection from "@/components/landing/WorkflowAISection";
+import IntegrationsSection from "@/components/landing/IntegrationsSection";
+import CTASection from "@/components/landing/CTASection";
+import Footer from "@/components/landing/Footer";
+
+export default function Home() {
+  return (
+    <div className="flex min-h-full flex-col">
+      <Header />
+      <main className="flex-1">
+        <Hero />
+        <VisionSection />
+        <FeatureShowcase />
+        <ModulesSection />
+        <RolesSection />
+        <WorkflowAISection />
+        <IntegrationsSection />
+        <CTASection />
+      </main>
+      <Footer />
+    </div>
+  );
+}
