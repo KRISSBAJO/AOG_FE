@@ -4,13 +4,16 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Alert, Button, Input } from "@/components/ui";
-import { isEmail, mockRequest } from "@/lib/validation";
+import { getErrorMessage } from "@/lib/api";
+import { forgotPassword } from "@/lib/auth";
+import { isEmail } from "@/lib/validation";
 
 export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | undefined>();
+  const [resetToken, setResetToken] = useState<string | undefined>();
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -20,9 +23,15 @@ export default function ForgotPasswordPage() {
     }
     setError(undefined);
     setLoading(true);
-    await mockRequest();
-    setLoading(false);
-    setSent(true);
+    try {
+      const response = await forgotPassword(email);
+      setResetToken(response.resetToken);
+      setSent(true);
+    } catch (error) {
+      setError(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -48,6 +57,11 @@ export default function ForgotPasswordPage() {
             If an account exists for that address, the link is on its way. It
             expires in 30 minutes.
           </Alert>
+          {resetToken && (
+            <Alert tone="info">
+              Local dev reset link: /reset-password?token={resetToken}
+            </Alert>
+          )}
           <Button
             variant="outline"
             fullWidth

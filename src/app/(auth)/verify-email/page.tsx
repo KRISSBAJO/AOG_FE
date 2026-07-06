@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { CodeInput } from "@/components/auth/CodeInput";
 import { Alert, Button } from "@/components/ui";
-import { mockRequest } from "@/lib/validation";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -23,14 +22,12 @@ export default function VerifyEmailPage() {
     }
     setError(null);
     setLoading(true);
-    await mockRequest();
     setLoading(false);
     router.push("/dashboard");
   }
 
   async function resend() {
     setResent(true);
-    await mockRequest(600);
   }
 
   return (

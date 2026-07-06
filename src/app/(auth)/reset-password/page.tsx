@@ -1,19 +1,32 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { Alert, Button, PasswordInput } from "@/components/ui";
-import { mockRequest, passwordStrength } from "@/lib/validation";
+import { getErrorMessage } from "@/lib/api";
+import { resetPassword } from "@/lib/auth";
+import { passwordStrength } from "@/lib/validation";
 
 type Errors = { password?: string; confirm?: string };
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordForm />
+    </Suspense>
+  );
+}
+
+function ResetPasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token") ?? "";
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [errors, setErrors] = useState<Errors>({});
@@ -24,14 +37,21 @@ export default function ResetPasswordPage() {
     if (passwordStrength(password).score < 2)
       next.password = "Choose a stronger password (8+ chars, mixed case).";
     if (confirm !== password) next.confirm = "Passwords don't match.";
+    if (!token) next.confirm = "Reset token is missing from the URL.";
     setErrors(next);
     if (Object.keys(next).length) return;
 
     setLoading(true);
-    await mockRequest();
-    setLoading(false);
-    setDone(true);
-    setTimeout(() => router.push("/sign-in"), 1600);
+    setFormError(null);
+    try {
+      await resetPassword(token, password);
+      setDone(true);
+      setTimeout(() => router.push("/sign-in"), 1600);
+    } catch (error) {
+      setFormError(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -53,6 +73,7 @@ export default function ResetPasswordPage() {
         </Alert>
       ) : (
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          {formError && <Alert tone="error">{formError}</Alert>}
           <div>
             <PasswordInput
               name="password"

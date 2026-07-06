@@ -7,15 +7,17 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { SocialButtons } from "@/components/auth/SocialButtons";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import {
+  Alert,
   Button,
   Checkbox,
   Divider,
   Input,
   PasswordInput,
 } from "@/components/ui";
+import { getErrorMessage } from "@/lib/api";
+import { saveAuthSession, signUp } from "@/lib/auth";
 import {
   isEmail,
-  mockRequest,
   passwordStrength,
   required,
 } from "@/lib/validation";
@@ -31,6 +33,7 @@ export default function SignUpPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Errors>({});
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -38,6 +41,7 @@ export default function SignUpPage() {
     const data = new FormData(e.currentTarget);
     const name = String(data.get("name") ?? "");
     const email = String(data.get("email") ?? "");
+    const workspaceName = String(data.get("workspaceName") ?? "");
     const terms = data.get("terms") === "on";
 
     const next: Errors = {};
@@ -49,10 +53,22 @@ export default function SignUpPage() {
     setErrors(next);
     if (Object.keys(next).length) return;
 
+    setFormError(null);
     setLoading(true);
-    await mockRequest();
-    setLoading(false);
-    router.push("/verify-email");
+    try {
+      const session = await signUp({
+        displayName: name,
+        workspaceName: workspaceName || `${name}'s Workspace`,
+        email,
+        password,
+      });
+      saveAuthSession(session);
+      router.push("/dashboard");
+    } catch (error) {
+      setFormError(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -75,6 +91,8 @@ export default function SignUpPage() {
         <SocialButtons />
         <Divider label="or sign up with email" />
 
+        {formError && <Alert tone="error">{formError}</Alert>}
+
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
           <Input
             name="name"
@@ -82,6 +100,12 @@ export default function SignUpPage() {
             placeholder="Jordan Rivera"
             autoComplete="name"
             error={errors.name}
+          />
+          <Input
+            name="workspaceName"
+            label="Workspace name"
+            placeholder="AOG Services"
+            autoComplete="organization"
           />
           <Input
             name="email"

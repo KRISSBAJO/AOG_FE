@@ -13,7 +13,9 @@ import {
   Input,
   PasswordInput,
 } from "@/components/ui";
-import { isEmail, mockRequest, required } from "@/lib/validation";
+import { getErrorMessage } from "@/lib/api";
+import { saveAuthSession, signIn } from "@/lib/auth";
+import { isEmail, required } from "@/lib/validation";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -37,9 +39,15 @@ export default function SignInPage() {
     if (Object.keys(next).length) return;
 
     setLoading(true);
-    await mockRequest();
-    setLoading(false);
-    router.push("/dashboard");
+    try {
+      const session = await signIn(email, password);
+      saveAuthSession(session);
+      router.push("/dashboard");
+    } catch (error) {
+      setFormError(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
