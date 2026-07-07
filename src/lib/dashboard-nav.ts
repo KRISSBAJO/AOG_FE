@@ -98,7 +98,6 @@ const ROLE_NAV: Record<string, Set<string>> = {
   STAFF: new Set([
     "Overview",
     "Work Orders",
-    "Scheduling",
     "Time Clock",
     "Messages",
     "Files",
