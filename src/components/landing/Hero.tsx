@@ -1,6 +1,15 @@
 "use client";
 
-import { ArrowRight, BadgeCheck, ClipboardList, ShieldCheck } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  ClipboardList,
+  Clock3,
+  ShieldCheck,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { AnimatedNumber } from "./motion/primitives";
 
@@ -12,20 +21,75 @@ const stats = [
   { value: 24, suffix: "/7", label: "Live monitoring" },
 ];
 
-const consoleStats = [
-  { label: "Requests", value: "42", icon: ClipboardList },
-  { label: "Work orders", value: "128", icon: BadgeCheck },
-  { label: "On-site staff", value: "64", icon: ShieldCheck },
+const commandMetrics = [
+  {
+    label: "Open requests",
+    value: "42",
+    detail: "+8 today",
+    icon: ClipboardList,
+    tone: "text-sky-300",
+  },
+  {
+    label: "Crew utilization",
+    value: "87%",
+    detail: "64 on site",
+    icon: Building2,
+    tone: "text-cyan-300",
+  },
+  {
+    label: "SLA risk",
+    value: "3",
+    detail: "needs review",
+    icon: AlertTriangle,
+    tone: "text-amber-200",
+  },
+  {
+    label: "Completed",
+    value: "128",
+    detail: "this week",
+    icon: CheckCircle2,
+    tone: "text-emerald-300",
+  },
 ];
 
-const volumeBars = [
-  { height: 36, color: "bg-sky-400/45" },
-  { height: 46, color: "bg-cyan-300/45" },
-  { height: 32, color: "bg-indigo-300/45" },
-  { height: 52, color: "bg-teal-300/45" },
-  { height: 40, color: "bg-blue-300/45" },
-  { height: 58, color: "bg-emerald-300/45" },
-  { height: 48, color: "bg-violet-300/55" },
+const pipelineStages = [
+  { label: "Received", count: "42", width: "w-[76%]", color: "bg-sky-400" },
+  { label: "Scheduled", count: "31", width: "w-[58%]", color: "bg-cyan-400" },
+  { label: "In progress", count: "18", width: "w-[42%]", color: "bg-blue-400" },
+  { label: "QA review", count: "7", width: "w-[24%]", color: "bg-violet-400" },
+];
+
+const riskItems = [
+  { label: "Late check-ins", value: "2", dot: "bg-amber-400" },
+  { label: "Open incidents", value: "1", dot: "bg-red-400" },
+  { label: "QA exceptions", value: "0", dot: "bg-emerald-400" },
+];
+
+const dispatchRows = [
+  {
+    id: "WO-2841",
+    service: "Deep clean",
+    site: "Northgate / Floor 14",
+    eta: "08:30",
+    status: "QA",
+    badge: "border-sky-300/30 bg-sky-300/10 text-sky-200",
+  },
+  {
+    id: "WO-2839",
+    service: "Night security",
+    site: "Gate 3",
+    eta: "21:00",
+    status: "Active",
+    badge: "border-emerald-300/30 bg-emerald-300/10 text-emerald-200",
+  },
+  {
+    id: "WO-2832",
+    service: "Event setup",
+    site: "Meridian Hall",
+    eta: "14:15",
+    status: "Queued",
+    badge: "border-slate-300/20 bg-white/[0.06] text-slate-300",
+  },
 ];
 
 const container = {
@@ -56,10 +120,10 @@ export default function Hero() {
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(245,158,11,0.16)_0%,rgba(11,17,32,0.15)_22%,rgba(37,99,235,0.14)_100%)]"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(245,158,11,0.10)_0%,rgba(11,17,32,0.15)_24%,rgba(37,99,235,0.16)_100%)]"
       />
 
-      <div className="relative mx-auto grid max-w-7xl gap-10 px-6 pb-20 pt-16 lg:grid-cols-[0.92fr_1fr] lg:px-8 lg:pb-24 lg:pt-24">
+      <div className="relative mx-auto grid max-w-7xl gap-10 px-6 pb-18 pt-14 lg:grid-cols-[0.88fr_1.12fr] lg:px-8 lg:pb-22 lg:pt-22">
         <motion.div
           className="flex flex-col justify-center"
           variants={container}
@@ -68,9 +132,9 @@ export default function Hero() {
         >
           <motion.span
             variants={item}
-            className="inline-flex w-fit items-center rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-bold uppercase text-amber-300"
+            className="inline-flex w-fit items-center rounded-full border border-sky-300/25 bg-sky-300/10 px-3 py-1 text-xs font-bold uppercase text-sky-200"
           >
-            <span className="mr-2 h-1.5 w-1.5 rounded-full bg-amber-400" />
+            <span className="mr-2 h-1.5 w-1.5 rounded-full bg-sky-300" />
             Enterprise Facility Operations
           </motion.span>
 
@@ -78,16 +142,16 @@ export default function Hero() {
             variants={item}
             className="mt-6 max-w-xl text-3xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-4xl lg:text-5xl xl:text-6xl"
           >
-            Facility services,{" "}
-            <span className="text-amber-400">managed</span> in one place
+            Facility operations,{" "}
+            <span className="text-sky-300">controlled</span> in one command center
           </motion.h1>
 
           <motion.p
             variants={item}
             className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg"
           >
-            Book, schedule, track, and bill cleaning, security, parking,
-            events, and facility support from one command center.
+            Book, dispatch, monitor, and bill cleaning, security, parking,
+            events, and facility support with live operational visibility.
           </motion.p>
 
           <motion.div variants={item} className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -95,7 +159,7 @@ export default function Hero() {
               href="/contact"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.98 }}
-              className="inline-flex items-center justify-center gap-3 rounded-xl bg-amber-400 px-6 py-3.5 text-sm font-black text-[#0B1120] shadow-lg shadow-amber-400/20 transition hover:bg-amber-300"
+              className="inline-flex items-center justify-center gap-3 rounded-lg bg-amber-400 px-6 py-3.5 text-sm font-black text-[#0B1120] shadow-lg shadow-amber-400/20 transition hover:bg-amber-300"
             >
               Request a service
               <ArrowRight className="h-4 w-4" />
@@ -104,7 +168,7 @@ export default function Hero() {
               href="#modules"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.98 }}
-              className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/[0.04] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-lg border border-white/15 bg-white/[0.04] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-white/10"
             >
               Explore Services
             </motion.a>
@@ -131,65 +195,103 @@ export default function Hero() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.75, ease: EASE, delay: 0.16 }}
         >
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/[0.12] bg-[#121827]/90 shadow-2xl shadow-black/35">
+          <div className="w-full max-w-2xl overflow-hidden rounded-lg border border-white/[0.12] bg-[#101827]/95 shadow-2xl shadow-black/35">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
               <div>
-                <p className="text-sm font-black text-white">Operations Console</p>
-                <p className="mt-1 text-xs text-slate-500">Today&apos;s live service picture</p>
+                <p className="text-sm font-black text-white">Operations Command Center</p>
+                <p className="mt-1 text-xs text-slate-500">Live workspace read model</p>
               </div>
-              <span className="rounded-lg bg-emerald-400 px-3 py-1.5 text-xs font-black text-[#052012]">
-                Live
+              <span className="inline-flex items-center gap-2 rounded-md border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-bold text-emerald-200">
+                <Activity className="h-3.5 w-3.5" />
+                Synced
               </span>
             </div>
 
-            <div className="p-5">
-              <div className="grid grid-cols-3 gap-3">
-                {consoleStats.map(({ label, value, icon: Icon }) => (
-                  <div key={label} className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="p-4">
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                {commandMetrics.map(({ label, value, detail, icon: Icon, tone }) => (
+                  <div key={label} className="rounded-lg border border-white/10 bg-white/[0.045] p-3">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-[10px] font-bold uppercase text-slate-500">{label}</p>
-                      <Icon className="h-4 w-4 text-sky-300" />
+                      <Icon className={`h-4 w-4 ${tone}`} />
                     </div>
-                    <p className="mt-3 text-2xl font-black text-white">{value}</p>
+                    <p className="mt-3 text-2xl font-black tracking-tight text-white">{value}</p>
+                    <p className="mt-1 text-[11px] font-medium text-slate-500">{detail}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.035] p-4">
-                <div className="mb-3 flex items-center justify-between text-sm">
-                  <p className="font-bold text-white">Service volume</p>
-                  <p className="text-xs text-slate-500">Last 7 days</p>
+              <div className="mt-3 grid gap-3 lg:grid-cols-[1.35fr_0.85fr]">
+                <div className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-white">Work order pipeline</p>
+                    <span className="text-xs font-medium text-slate-500">Today</span>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {pipelineStages.map((stage) => (
+                      <div key={stage.label}>
+                        <div className="mb-1.5 flex items-center justify-between text-xs">
+                          <span className="font-medium text-slate-300">{stage.label}</span>
+                          <span className="font-bold text-white">{stage.count}</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                          <div className={`h-full rounded-full ${stage.width} ${stage.color}`} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex h-16 items-end gap-1.5">
-                  {volumeBars.map((bar, index) => (
-                    <span
-                      key={index}
-                      className={`flex-1 rounded-t ${bar.color}`}
-                      style={{ height: `${bar.height}%` }}
-                    />
+
+                <div className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-white">Risk control</p>
+                    <ShieldCheck className="h-4 w-4 text-emerald-300" />
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {riskItems.map((risk) => (
+                      <div
+                        key={risk.label}
+                        className="flex items-center justify-between rounded-md bg-white/[0.045] px-3 py-2"
+                      >
+                        <span className="flex items-center gap-2 text-xs font-medium text-slate-300">
+                          <span className={`h-1.5 w-1.5 rounded-full ${risk.dot}`} />
+                          {risk.label}
+                        </span>
+                        <span className="text-sm font-black text-white">{risk.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.035]">
+                <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                  <p className="text-sm font-bold text-white">Dispatch board</p>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    Next 4 hours
+                  </span>
+                </div>
+                <div className="divide-y divide-white/10">
+                  {dispatchRows.map((row) => (
+                    <div
+                      key={row.id}
+                      className="grid grid-cols-[88px_1fr_auto] items-center gap-3 px-4 py-3 text-sm"
+                    >
+                      <span className="font-mono text-xs font-black text-sky-200">{row.id}</span>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-white">{row.service}</p>
+                        <p className="mt-0.5 truncate text-xs text-slate-500">
+                          {row.site} / ETA {row.eta}
+                        </p>
+                      </div>
+                      <span className={`rounded-md border px-2.5 py-1 text-xs font-bold ${row.badge}`}>
+                        {row.status}
+                      </span>
+                    </div>
                   ))}
                 </div>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                {[
-                  ["#WO-2841", "Deep clean - Floor 14", "Done"],
-                  ["#WO-2839", "Night security - Gate 3", "Active"],
-                ].map(([id, title, status]) => (
-                  <div key={id} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3">
-                    <div className="min-w-0">
-                      <span className="rounded-md bg-sky-400/15 px-2 py-1 text-xs font-black text-sky-300">{id}</span>
-                      <span className="ml-3 text-sm font-semibold text-white">{title}</span>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-black ${
-                      status === "Done"
-                        ? "bg-emerald-400 text-[#052012]"
-                        : "bg-sky-300 text-[#08111f]"
-                    }`}>
-                      {status}
-                    </span>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
