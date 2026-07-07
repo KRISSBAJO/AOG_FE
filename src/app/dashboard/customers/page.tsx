@@ -1,14 +1,26 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  Dispatch,
+  FormEvent,
+  SetStateAction,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
+  Check,
+  ChevronDown,
+  Edit3,
   Plus,
   RefreshCw,
   Search,
   Send,
+  Trash2,
   UserRoundPlus,
+  X,
 } from "lucide-react";
 
 import {
@@ -72,7 +84,12 @@ export default function CustomersPage() {
   const [contactSaving, setContactSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [customerMode, setCustomerMode] = useState<"create" | "edit">("create");
+  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
+  const [customerDeletingId, setCustomerDeletingId] = useState<string | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [customerForm, setCustomerForm] = useState(emptyCustomerForm);
@@ -81,6 +98,11 @@ export default function CustomersPage() {
   const activeCustomers = useMemo(
     () => customers.filter((customer) => customer.status !== "ARCHIVED"),
     [customers],
+  );
+
+  const selectedCustomer = useMemo(
+    () => activeCustomers.find((customer) => customer.id === selectedCustomerId),
+    [activeCustomers, selectedCustomerId],
   );
 
   async function loadCustomers(nextSearch = search) {
@@ -107,28 +129,103 @@ export default function CustomersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function createCustomer(event: FormEvent<HTMLFormElement>) {
+  function openCreateCustomerModal() {
+    setError(null);
+    setCustomerMode("create");
+    setEditingCustomerId(null);
+    setCustomerForm(emptyCustomerForm);
+    setCreateOpen(true);
+  }
+
+  function openEditCustomerModal(customer: Customer) {
+    setError(null);
+    setCustomerMode("edit");
+    setEditingCustomerId(customer.id);
+    setCustomerForm({
+      name: customer.name,
+      type: customer.type,
+      status: customer.status === "ARCHIVED" ? "INACTIVE" : customer.status,
+      billingEmail: customer.billingEmail ?? "",
+      phone: customer.phone ?? "",
+      city: customer.city ?? "",
+      state: customer.state ?? "",
+    });
+    setCreateOpen(true);
+  }
+
+  function closeCustomerModal() {
+    setCreateOpen(false);
+    setEditingCustomerId(null);
+    setCustomerForm(emptyCustomerForm);
+  }
+
+  async function saveCustomer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setError(null);
 
     try {
-      const created = await phase3Api.createCustomer({
+      const payload = {
         ...customerForm,
         billingEmail: customerForm.billingEmail || undefined,
         phone: customerForm.phone || undefined,
         city: customerForm.city || undefined,
         state: customerForm.state || undefined,
-      });
+      };
+      const saved =
+        customerMode === "edit" && editingCustomerId
+          ? await phase3Api.updateCustomer(editingCustomerId, payload)
+          : await phase3Api.createCustomer(payload);
+
       setCustomerForm(emptyCustomerForm);
-      setSelectedCustomerId(created.id);
+      if (customerMode === "create" || selectedCustomerId === saved.id) {
+        setSelectedCustomerId(saved.id);
+      }
       setCreateOpen(false);
-      toast.success(`${created.name} was added.`, "Customer created");
+      setEditingCustomerId(null);
+      toast.success(
+        customerMode === "edit"
+          ? `${saved.name} was updated.`
+          : `${saved.name} was added and selected.`,
+        customerMode === "edit" ? "Customer updated" : "Customer created",
+      );
       await loadCustomers(search);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function archiveCustomer(customer: Customer) {
+    const facilityCount = customer._count?.facilities ?? 0;
+    const contactCount = customer._count?.contacts ?? 0;
+    const confirmed = window.confirm(
+      facilityCount || contactCount
+        ? `Archive ${customer.name}? This customer has ${facilityCount} facilities and ${contactCount} contacts.`
+        : `Archive ${customer.name}?`,
+    );
+
+    if (!confirmed) return;
+
+    setCustomerDeletingId(customer.id);
+    setError(null);
+
+    try {
+      await phase3Api.archiveCustomer(customer.id);
+      if (selectedCustomerId === customer.id) {
+        const fallback = activeCustomers.find((item) => item.id !== customer.id);
+        setSelectedCustomerId(fallback?.id ?? "");
+      }
+      if (editingCustomerId === customer.id) {
+        closeCustomerModal();
+      }
+      toast.success(`${customer.name} was archived.`, "Customer archived");
+      await loadCustomers(search);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setCustomerDeletingId(null);
     }
   }
 
@@ -196,12 +293,11 @@ export default function CustomersPage() {
             <Button
               variant="outline"
               onClick={() => setContactOpen(true)}
-              disabled={!activeCustomers.length}
             >
               <UserRoundPlus className="h-4 w-4" />
               Add contact
             </Button>
-            <Button onClick={() => setCreateOpen(true)}>
+            <Button onClick={openCreateCustomerModal}>
               <Plus className="h-4 w-4" />
               New customer
             </Button>
@@ -269,7 +365,7 @@ export default function CustomersPage() {
                     <p className="mt-1 text-sm text-slate-500">
                       Add your first customer account to start building contracts.
                     </p>
-                    <Button className="mt-4" onClick={() => setCreateOpen(true)}>
+                    <Button className="mt-4" onClick={openCreateCustomerModal}>
                       <Plus className="h-4 w-4" />
                       New customer
                     </Button>
@@ -281,96 +377,19 @@ export default function CustomersPage() {
         </div>
       </Card>
 
-      {/* Create customer */}
-      <Drawer
+      <CustomerModal
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title="New customer"
-        description="Create a customer account for contracts and facilities."
-        icon={Building2}
-      >
-        <form onSubmit={createCustomer} className="flex h-full flex-col">
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
-            {error && <Alert tone="error">{error}</Alert>}
-
-            <DrawerSection title="Account">
-              <Input
-                label="Name"
-                value={customerForm.name}
-                onChange={(event) =>
-                  setCustomerForm((form) => ({ ...form, name: event.target.value }))
-                }
-                placeholder="Acme Facilities Inc."
-                required
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Select
-                  label="Type"
-                  options={typeOptions}
-                  value={customerForm.type}
-                  onChange={(event) =>
-                    setCustomerForm((form) => ({ ...form, type: event.target.value }))
-                  }
-                />
-                <Select
-                  label="Status"
-                  options={statusOptions}
-                  value={customerForm.status}
-                  onChange={(event) =>
-                    setCustomerForm((form) => ({ ...form, status: event.target.value }))
-                  }
-                />
-              </div>
-            </DrawerSection>
-
-            <DrawerSection title="Billing & contact">
-              <Input
-                label="Billing email"
-                type="email"
-                value={customerForm.billingEmail}
-                onChange={(event) =>
-                  setCustomerForm((form) => ({ ...form, billingEmail: event.target.value }))
-                }
-                placeholder="billing@company.com"
-              />
-              <Input
-                label="Phone"
-                value={customerForm.phone}
-                onChange={(event) =>
-                  setCustomerForm((form) => ({ ...form, phone: event.target.value }))
-                }
-                placeholder="+1 (555) 000-0000"
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  label="City"
-                  value={customerForm.city}
-                  onChange={(event) =>
-                    setCustomerForm((form) => ({ ...form, city: event.target.value }))
-                  }
-                />
-                <Input
-                  label="State"
-                  value={customerForm.state}
-                  onChange={(event) =>
-                    setCustomerForm((form) => ({ ...form, state: event.target.value }))
-                  }
-                />
-              </div>
-            </DrawerSection>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
-            <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={saving}>
-              <Plus className="h-4 w-4" />
-              Save customer
-            </Button>
-          </div>
-        </form>
-      </Drawer>
+        mode={customerMode}
+        form={customerForm}
+        saving={saving}
+        deleting={editingCustomerId === customerDeletingId}
+        error={error}
+        editingCustomer={customers.find((customer) => customer.id === editingCustomerId)}
+        onClose={closeCustomerModal}
+        onSubmit={saveCustomer}
+        onDelete={(customer) => void archiveCustomer(customer)}
+        onChange={setCustomerForm}
+      />
 
       {/* Add contact */}
       <Drawer
@@ -384,15 +403,19 @@ export default function CustomersPage() {
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
             {error && <Alert tone="error">{error}</Alert>}
 
-            <Select
-              label="Customer"
-              options={activeCustomers.map((customer) => ({
-                value: customer.id,
-                label: customer.name,
-              }))}
+            <CustomerPicker
+              customers={activeCustomers}
               value={selectedCustomerId}
-              onChange={(event) => setSelectedCustomerId(event.target.value)}
-              disabled={!activeCustomers.length}
+              selectedCustomer={selectedCustomer}
+              search={customerSearch}
+              open={customerPickerOpen}
+              deletingCustomerId={customerDeletingId}
+              onSearchChange={setCustomerSearch}
+              onOpenChange={setCustomerPickerOpen}
+              onSelect={setSelectedCustomerId}
+              onCreate={openCreateCustomerModal}
+              onEdit={openEditCustomerModal}
+              onDelete={(customer) => void archiveCustomer(customer)}
             />
 
             <DrawerSection title="Contact details">
@@ -460,6 +483,324 @@ export default function CustomersPage() {
           </div>
         </form>
       </Drawer>
+    </div>
+  );
+}
+
+function CustomerPicker({
+  customers,
+  value,
+  selectedCustomer,
+  search,
+  open,
+  deletingCustomerId,
+  onSearchChange,
+  onOpenChange,
+  onSelect,
+  onCreate,
+  onEdit,
+  onDelete,
+}: {
+  customers: Customer[];
+  value: string;
+  selectedCustomer?: Customer;
+  search: string;
+  open: boolean;
+  deletingCustomerId?: string | null;
+  onSearchChange: (value: string) => void;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (customerId: string) => void;
+  onCreate: () => void;
+  onEdit: (customer: Customer) => void;
+  onDelete: (customer: Customer) => void;
+}) {
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredCustomers = customers.filter((customer) => {
+    if (!normalizedSearch) return true;
+    return [
+      customer.name,
+      customer.billingEmail,
+      customer.phone,
+      customer.city,
+      customer.state,
+      customer.type,
+    ]
+      .filter(Boolean)
+      .some((field) => String(field).toLowerCase().includes(normalizedSearch));
+  });
+
+  return (
+    <div className="relative">
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <label className="text-sm font-medium text-slate-700">Customer</label>
+        <button
+          type="button"
+          onClick={onCreate}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-left text-sm text-slate-900 transition-colors hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+      >
+        <span className="min-w-0">
+          <span className="block truncate font-medium">
+            {selectedCustomer?.name ?? "Select customer"}
+          </span>
+          <span className="block truncate text-xs text-slate-400">
+            {selectedCustomer
+              ? [selectedCustomer.city, selectedCustomer.state].filter(Boolean).join(", ") ||
+                selectedCustomer.billingEmail ||
+                selectedCustomer.type.replaceAll("_", " ").toLowerCase()
+              : "Search, add, edit, or archive customer accounts"}
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+      </button>
+
+      {open && (
+        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/12">
+          <div className="border-b border-slate-100 p-3">
+            <Input
+              value={search}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="Search customers"
+              icon={<Search className="h-4 w-4" />}
+              autoFocus
+            />
+          </div>
+
+          <div className="max-h-72 overflow-y-auto p-2">
+            {filteredCustomers.map((customer) => {
+              const active = value === customer.id;
+              return (
+                <div
+                  key={customer.id}
+                  className="group flex items-center gap-2 rounded-lg px-3 py-2.5 hover:bg-slate-50"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelect(customer.id);
+                      onOpenChange(false);
+                    }}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-slate-900">
+                        {customer.name}
+                      </span>
+                      {active && <Check className="h-4 w-4 shrink-0 text-emerald-500" />}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-slate-400">
+                      {[customer.city, customer.state].filter(Boolean).join(", ") ||
+                        customer.billingEmail ||
+                        customer.type.replaceAll("_", " ").toLowerCase()}
+                      {customer._count?.contacts
+                        ? ` · ${customer._count.contacts} contacts`
+                        : ""}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onEdit(customer)}
+                    className="rounded-md p-2 text-slate-400 hover:bg-white hover:text-slate-700"
+                    aria-label={`Edit ${customer.name}`}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(customer)}
+                    disabled={deletingCustomerId === customer.id}
+                    className="rounded-md p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    aria-label={`Archive ${customer.name}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
+
+            {!filteredCustomers.length && (
+              <div className="px-3 py-8 text-center">
+                <p className="text-sm font-medium text-slate-900">No customers found</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Add a customer before saving a contact.
+                </p>
+                <Button type="button" size="sm" className="mt-3" onClick={onCreate}>
+                  <Plus className="h-4 w-4" />
+                  Add customer
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CustomerModal({
+  open,
+  mode,
+  form,
+  saving,
+  deleting,
+  error,
+  editingCustomer,
+  onClose,
+  onSubmit,
+  onDelete,
+  onChange,
+}: {
+  open: boolean;
+  mode: "create" | "edit";
+  form: typeof emptyCustomerForm;
+  saving: boolean;
+  deleting?: boolean;
+  error?: string | null;
+  editingCustomer?: Customer;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onDelete: (customer: Customer) => void;
+  onChange: Dispatch<SetStateAction<typeof emptyCustomerForm>>;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-8 backdrop-blur-sm">
+      <form
+        onSubmit={onSubmit}
+        className="max-h-[90vh] w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <Building2 className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-base font-semibold text-slate-950">
+                {mode === "edit" ? "Edit customer" : "Add customer"}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {mode === "edit"
+                  ? "Update account details used across contacts, facilities, and contracts."
+                  : "Create a customer account and select it for this contact."}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Close customer modal"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="max-h-[calc(90vh-150px)] space-y-5 overflow-y-auto px-5 py-5">
+          {error && <Alert tone="error">{error}</Alert>}
+          <DrawerSection title="Account">
+            <Input
+              label="Name"
+              value={form.name}
+              onChange={(event) =>
+                onChange((current) => ({ ...current, name: event.target.value }))
+              }
+              placeholder="Acme Facilities Inc."
+              required
+              autoFocus
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                label="Type"
+                options={typeOptions}
+                value={form.type}
+                onChange={(event) =>
+                  onChange((current) => ({ ...current, type: event.target.value }))
+                }
+              />
+              <Select
+                label="Status"
+                options={statusOptions}
+                value={form.status}
+                onChange={(event) =>
+                  onChange((current) => ({ ...current, status: event.target.value }))
+                }
+              />
+            </div>
+          </DrawerSection>
+
+          <DrawerSection title="Billing & contact">
+            <Input
+              label="Billing email"
+              type="email"
+              value={form.billingEmail}
+              onChange={(event) =>
+                onChange((current) => ({ ...current, billingEmail: event.target.value }))
+              }
+              placeholder="billing@company.com"
+            />
+            <Input
+              label="Phone"
+              value={form.phone}
+              onChange={(event) =>
+                onChange((current) => ({ ...current, phone: event.target.value }))
+              }
+              placeholder="+1 (555) 000-0000"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="City"
+                value={form.city}
+                onChange={(event) =>
+                  onChange((current) => ({ ...current, city: event.target.value }))
+                }
+              />
+              <Input
+                label="State"
+                value={form.state}
+                onChange={(event) =>
+                  onChange((current) => ({ ...current, state: event.target.value }))
+                }
+              />
+            </div>
+          </DrawerSection>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            {mode === "edit" && editingCustomer && (
+              <Button
+                type="button"
+                variant="ghost"
+                loading={deleting}
+                onClick={() => onDelete(editingCustomer)}
+                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+                Archive
+              </Button>
+            )}
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={saving}>
+              <Plus className="h-4 w-4" />
+              {mode === "edit" ? "Save changes" : "Create customer"}
+            </Button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }
