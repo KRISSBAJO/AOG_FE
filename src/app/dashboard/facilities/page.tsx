@@ -1,15 +1,27 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import {
+  Dispatch,
+  FormEvent,
+  SetStateAction,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
+  Check,
+  ChevronDown,
+  Edit3,
   MapPin,
   Plus,
   RefreshCw,
   Search,
   Send,
+  Trash2,
   UserRoundPlus,
+  X,
 } from "lucide-react";
 
 import {
@@ -74,11 +86,26 @@ export default function FacilitiesPage() {
   const [contactSaving, setContactSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [facilitySearch, setFacilitySearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [facilityMode, setFacilityMode] = useState<"create" | "edit">("create");
+  const [editingFacilityId, setEditingFacilityId] = useState<string | null>(null);
+  const [facilityPickerOpen, setFacilityPickerOpen] = useState(false);
+  const [facilityDeletingId, setFacilityDeletingId] = useState<string | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [selectedFacilityId, setSelectedFacilityId] = useState("");
   const [facilityForm, setFacilityForm] = useState(emptyFacilityForm);
   const [contactForm, setContactForm] = useState(emptyContactForm);
+
+  const activeFacilities = useMemo(
+    () => facilities.filter((facility) => facility.status !== "ARCHIVED"),
+    [facilities],
+  );
+
+  const selectedFacility = useMemo(
+    () => activeFacilities.find((facility) => facility.id === selectedFacilityId),
+    [activeFacilities, selectedFacilityId],
+  );
 
   async function loadData(nextSearch = search) {
     setLoading(true);
@@ -109,32 +136,118 @@ export default function FacilitiesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function createFacility(event: FormEvent<HTMLFormElement>) {
+  function openCreateFacilityModal() {
+    setError(null);
+    setFacilityMode("create");
+    setEditingFacilityId(null);
+    setFacilityForm((form) => ({
+      ...emptyFacilityForm,
+      customerId: form.customerId || customers[0]?.id || "",
+    }));
+    setCreateOpen(true);
+  }
+
+  function openEditFacilityModal(facility: Facility) {
+    const extendedFacility = facility as Facility & {
+      postalCode?: string | null;
+      country?: string | null;
+    };
+    setError(null);
+    setFacilityMode("edit");
+    setEditingFacilityId(facility.id);
+    setFacilityForm({
+      customerId: facility.customerId,
+      name: facility.name,
+      type: facility.type,
+      status: facility.status === "ARCHIVED" ? "INACTIVE" : facility.status,
+      city: facility.city ?? "",
+      state: facility.state ?? "",
+      postalCode: extendedFacility.postalCode ?? "",
+      country: extendedFacility.country ?? "US",
+    });
+    setCreateOpen(true);
+  }
+
+  function closeFacilityModal() {
+    setCreateOpen(false);
+    setEditingFacilityId(null);
+    setFacilityForm((form) => ({
+      ...emptyFacilityForm,
+      customerId: form.customerId,
+    }));
+  }
+
+  async function saveFacility(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setError(null);
 
     try {
-      const created = await phase3Api.createFacility({
+      const payload = {
         ...facilityForm,
         code: undefined,
         city: facilityForm.city || undefined,
         state: facilityForm.state || undefined,
         postalCode: facilityForm.postalCode || undefined,
         country: facilityForm.country || undefined,
-      });
+      };
+      const saved =
+        facilityMode === "edit" && editingFacilityId
+          ? await phase3Api.updateFacility(editingFacilityId, payload)
+          : await phase3Api.createFacility(payload);
+
       setFacilityForm((form) => ({
         ...emptyFacilityForm,
         customerId: form.customerId,
       }));
-      setSelectedFacilityId(created.id);
+      if (facilityMode === "create" || selectedFacilityId === saved.id) {
+        setSelectedFacilityId(saved.id);
+      }
       setCreateOpen(false);
-      toast.success(`${created.name} was added.`, "Facility created");
+      setEditingFacilityId(null);
+      toast.success(
+        facilityMode === "edit"
+          ? `${saved.name} was updated.`
+          : `${saved.name} was added and selected.`,
+        facilityMode === "edit" ? "Facility updated" : "Facility created",
+      );
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function archiveFacility(facility: Facility) {
+    const contactCount = facility._count?.contacts ?? 0;
+    const workOrderCount = facility._count?.workOrders ?? 0;
+    const confirmed = window.confirm(
+      contactCount || workOrderCount
+        ? `Archive ${facility.name}? This facility has ${contactCount} contacts and ${workOrderCount} work orders.`
+        : `Archive ${facility.name}?`,
+    );
+
+    if (!confirmed) return;
+
+    setFacilityDeletingId(facility.id);
+    setError(null);
+
+    try {
+      await phase3Api.archiveFacility(facility.id);
+      if (selectedFacilityId === facility.id) {
+        const fallback = activeFacilities.find((item) => item.id !== facility.id);
+        setSelectedFacilityId(fallback?.id ?? "");
+      }
+      if (editingFacilityId === facility.id) {
+        closeFacilityModal();
+      }
+      toast.success(`${facility.name} was archived.`, "Facility archived");
+      await loadData(search);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setFacilityDeletingId(null);
     }
   }
 
@@ -200,12 +313,11 @@ export default function FacilitiesPage() {
             <Button
               variant="outline"
               onClick={() => setContactOpen(true)}
-              disabled={!facilities.length}
             >
               <UserRoundPlus className="h-4 w-4" />
               Add contact
             </Button>
-            <Button onClick={() => setCreateOpen(true)} disabled={!customers.length}>
+            <Button onClick={openCreateFacilityModal} disabled={!customers.length}>
               <Plus className="h-4 w-4" />
               New facility
             </Button>
@@ -274,7 +386,7 @@ export default function FacilitiesPage() {
                         : "Create a customer first, then add their facilities."}
                     </p>
                     {customers.length > 0 && (
-                      <Button className="mt-4" onClick={() => setCreateOpen(true)}>
+                      <Button className="mt-4" onClick={openCreateFacilityModal}>
                         <Plus className="h-4 w-4" />
                         New facility
                       </Button>
@@ -287,101 +399,20 @@ export default function FacilitiesPage() {
         </div>
       </Card>
 
-      {/* Create facility */}
-      <Drawer
+      <FacilityModal
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title="New facility"
-        description="Add an operating location under a customer account."
-        icon={Building2}
-      >
-        <form onSubmit={createFacility} className="flex h-full flex-col">
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
-            {error && <Alert tone="error">{error}</Alert>}
-
-            <DrawerSection title="Facility">
-              <Select
-                label="Customer"
-                options={customers.map((customer) => ({
-                  value: customer.id,
-                  label: customer.name,
-                }))}
-                value={facilityForm.customerId}
-                onChange={(event) =>
-                  setFacilityForm((form) => ({ ...form, customerId: event.target.value }))
-                }
-                disabled={!customers.length}
-                required
-              />
-              <Input
-                label="Facility name"
-                value={facilityForm.name}
-                onChange={(event) =>
-                  setFacilityForm((form) => ({ ...form, name: event.target.value }))
-                }
-                icon={<Building2 className="h-4 w-4" />}
-                placeholder="Northgate Tower"
-                required
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <Select
-                  label="Type"
-                  options={typeOptions}
-                  value={facilityForm.type}
-                  onChange={(event) =>
-                    setFacilityForm((form) => ({ ...form, type: event.target.value }))
-                  }
-                />
-                <Select
-                  label="Status"
-                  options={statusOptions}
-                  value={facilityForm.status}
-                  onChange={(event) =>
-                    setFacilityForm((form) => ({ ...form, status: event.target.value }))
-                  }
-                />
-              </div>
-            </DrawerSection>
-
-            <DrawerSection title="Location">
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  label="City"
-                  value={facilityForm.city}
-                  onChange={(event) =>
-                    setFacilityForm((form) => ({ ...form, city: event.target.value }))
-                  }
-                  icon={<MapPin className="h-4 w-4" />}
-                />
-                <Input
-                  label="State"
-                  value={facilityForm.state}
-                  onChange={(event) =>
-                    setFacilityForm((form) => ({ ...form, state: event.target.value }))
-                  }
-                />
-              </div>
-              <Input
-                label="Postal code"
-                value={facilityForm.postalCode}
-                onChange={(event) =>
-                  setFacilityForm((form) => ({ ...form, postalCode: event.target.value }))
-                }
-              />
-            </DrawerSection>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
-            <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={saving} disabled={!facilityForm.customerId}>
-              <Plus className="h-4 w-4" />
-              Save facility
-            </Button>
-          </div>
-        </form>
-      </Drawer>
+        mode={facilityMode}
+        form={facilityForm}
+        customers={customers}
+        saving={saving}
+        deleting={editingFacilityId === facilityDeletingId}
+        error={error}
+        editingFacility={facilities.find((facility) => facility.id === editingFacilityId)}
+        onClose={closeFacilityModal}
+        onSubmit={saveFacility}
+        onDelete={(facility) => void archiveFacility(facility)}
+        onChange={setFacilityForm}
+      />
 
       {/* Add facility contact */}
       <Drawer
@@ -395,15 +426,20 @@ export default function FacilitiesPage() {
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
             {error && <Alert tone="error">{error}</Alert>}
 
-            <Select
-              label="Facility"
-              options={facilities.map((facility) => ({
-                value: facility.id,
-                label: facility.name,
-              }))}
+            <FacilityPicker
+              facilities={activeFacilities}
               value={selectedFacilityId}
-              onChange={(event) => setSelectedFacilityId(event.target.value)}
-              disabled={!facilities.length}
+              selectedFacility={selectedFacility}
+              search={facilitySearch}
+              open={facilityPickerOpen}
+              deletingFacilityId={facilityDeletingId}
+              canCreate={customers.length > 0}
+              onSearchChange={setFacilitySearch}
+              onOpenChange={setFacilityPickerOpen}
+              onSelect={setSelectedFacilityId}
+              onCreate={openCreateFacilityModal}
+              onEdit={openEditFacilityModal}
+              onDelete={(facility) => void archiveFacility(facility)}
             />
 
             <DrawerSection title="Contact details">
@@ -460,6 +496,343 @@ export default function FacilitiesPage() {
           </div>
         </form>
       </Drawer>
+    </div>
+  );
+}
+
+function FacilityPicker({
+  facilities,
+  value,
+  selectedFacility,
+  search,
+  open,
+  deletingFacilityId,
+  canCreate,
+  onSearchChange,
+  onOpenChange,
+  onSelect,
+  onCreate,
+  onEdit,
+  onDelete,
+}: {
+  facilities: Facility[];
+  value: string;
+  selectedFacility?: Facility;
+  search: string;
+  open: boolean;
+  deletingFacilityId?: string | null;
+  canCreate: boolean;
+  onSearchChange: (value: string) => void;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (facilityId: string) => void;
+  onCreate: () => void;
+  onEdit: (facility: Facility) => void;
+  onDelete: (facility: Facility) => void;
+}) {
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredFacilities = facilities.filter((facility) => {
+    if (!normalizedSearch) return true;
+    return [
+      facility.name,
+      facility.customer?.name,
+      facility.city,
+      facility.state,
+      facility.type,
+      facility.code,
+    ]
+      .filter(Boolean)
+      .some((field) => String(field).toLowerCase().includes(normalizedSearch));
+  });
+
+  return (
+    <div className="relative">
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <label className="text-sm font-medium text-slate-700">Facility</label>
+        <button
+          type="button"
+          onClick={onCreate}
+          disabled={!canCreate}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800 disabled:pointer-events-none disabled:text-slate-300"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-left text-sm text-slate-900 transition-colors hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+      >
+        <span className="min-w-0">
+          <span className="block truncate font-medium">
+            {selectedFacility?.name ?? "Select facility"}
+          </span>
+          <span className="block truncate text-xs text-slate-400">
+            {selectedFacility
+              ? selectedFacility.customer?.name ||
+                [selectedFacility.city, selectedFacility.state].filter(Boolean).join(", ") ||
+                selectedFacility.type.replaceAll("_", " ").toLowerCase()
+              : "Search, add, edit, or archive facilities"}
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+      </button>
+
+      {open && (
+        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/12">
+          <div className="border-b border-slate-100 p-3">
+            <Input
+              value={search}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="Search facilities"
+              icon={<Search className="h-4 w-4" />}
+              autoFocus
+            />
+          </div>
+
+          <div className="max-h-72 overflow-y-auto p-2">
+            {filteredFacilities.map((facility) => {
+              const active = value === facility.id;
+              return (
+                <div
+                  key={facility.id}
+                  className="group flex items-center gap-2 rounded-lg px-3 py-2.5 hover:bg-slate-50"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelect(facility.id);
+                      onOpenChange(false);
+                    }}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-slate-900">
+                        {facility.name}
+                      </span>
+                      {active && <Check className="h-4 w-4 shrink-0 text-emerald-500" />}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-slate-400">
+                      {facility.customer?.name ||
+                        [facility.city, facility.state].filter(Boolean).join(", ") ||
+                        facility.type.replaceAll("_", " ").toLowerCase()}
+                      {facility._count?.contacts
+                        ? ` · ${facility._count.contacts} contacts`
+                        : ""}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onEdit(facility)}
+                    className="rounded-md p-2 text-slate-400 hover:bg-white hover:text-slate-700"
+                    aria-label={`Edit ${facility.name}`}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(facility)}
+                    disabled={deletingFacilityId === facility.id}
+                    className="rounded-md p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    aria-label={`Archive ${facility.name}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
+
+            {!filteredFacilities.length && (
+              <div className="px-3 py-8 text-center">
+                <p className="text-sm font-medium text-slate-900">No facilities found</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Add a facility before saving an on-site contact.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="mt-3"
+                  onClick={onCreate}
+                  disabled={!canCreate}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add facility
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FacilityModal({
+  open,
+  mode,
+  form,
+  customers,
+  saving,
+  deleting,
+  error,
+  editingFacility,
+  onClose,
+  onSubmit,
+  onDelete,
+  onChange,
+}: {
+  open: boolean;
+  mode: "create" | "edit";
+  form: typeof emptyFacilityForm;
+  customers: Customer[];
+  saving: boolean;
+  deleting?: boolean;
+  error?: string | null;
+  editingFacility?: Facility;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onDelete: (facility: Facility) => void;
+  onChange: Dispatch<SetStateAction<typeof emptyFacilityForm>>;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-8 backdrop-blur-sm">
+      <form
+        onSubmit={onSubmit}
+        className="max-h-[90vh] w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <Building2 className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-base font-semibold text-slate-950">
+                {mode === "edit" ? "Edit facility" : "Add facility"}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {mode === "edit"
+                  ? "Update the operating location used for service work and contacts."
+                  : "Create a facility and select it for this contact."}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Close facility modal"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="max-h-[calc(90vh-150px)] space-y-5 overflow-y-auto px-5 py-5">
+          {error && <Alert tone="error">{error}</Alert>}
+          {!customers.length && (
+            <Alert>Create a customer before adding facilities.</Alert>
+          )}
+          <DrawerSection title="Facility">
+            <Select
+              label="Customer"
+              options={customers.map((customer) => ({
+                value: customer.id,
+                label: customer.name,
+              }))}
+              value={form.customerId}
+              onChange={(event) =>
+                onChange((current) => ({ ...current, customerId: event.target.value }))
+              }
+              disabled={!customers.length}
+              required
+            />
+            <Input
+              label="Facility name"
+              value={form.name}
+              onChange={(event) =>
+                onChange((current) => ({ ...current, name: event.target.value }))
+              }
+              icon={<Building2 className="h-4 w-4" />}
+              placeholder="Northgate Tower"
+              required
+              autoFocus
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                label="Type"
+                options={typeOptions}
+                value={form.type}
+                onChange={(event) =>
+                  onChange((current) => ({ ...current, type: event.target.value }))
+                }
+              />
+              <Select
+                label="Status"
+                options={statusOptions}
+                value={form.status}
+                onChange={(event) =>
+                  onChange((current) => ({ ...current, status: event.target.value }))
+                }
+              />
+            </div>
+          </DrawerSection>
+
+          <DrawerSection title="Location">
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="City"
+                value={form.city}
+                onChange={(event) =>
+                  onChange((current) => ({ ...current, city: event.target.value }))
+                }
+                icon={<MapPin className="h-4 w-4" />}
+              />
+              <Input
+                label="State"
+                value={form.state}
+                onChange={(event) =>
+                  onChange((current) => ({ ...current, state: event.target.value }))
+                }
+              />
+            </div>
+            <Input
+              label="Postal code"
+              value={form.postalCode}
+              onChange={(event) =>
+                onChange((current) => ({ ...current, postalCode: event.target.value }))
+              }
+            />
+          </DrawerSection>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            {mode === "edit" && editingFacility && (
+              <Button
+                type="button"
+                variant="ghost"
+                loading={deleting}
+                onClick={() => onDelete(editingFacility)}
+                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+                Archive
+              </Button>
+            )}
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={saving} disabled={!form.customerId}>
+              <Plus className="h-4 w-4" />
+              {mode === "edit" ? "Save changes" : "Create facility"}
+            </Button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }
