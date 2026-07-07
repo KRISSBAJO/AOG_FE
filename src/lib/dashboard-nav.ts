@@ -54,7 +54,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Workforce", href: "/dashboard/workforce", icon: Users },
       { label: "Billing", href: "/dashboard/billing", icon: Wallet },
-      { label: "Reports", href: "/dashboard", icon: BarChart3 },
+      { label: "Reports", href: "/dashboard/reports", icon: BarChart3 },
     ],
   },
   {
@@ -66,6 +66,6 @@ export const navSections: NavSection[] = [
   },
   {
     title: "System",
-    items: [{ label: "Settings", href: "/dashboard", icon: Settings }],
+    items: [{ label: "Settings", href: "/dashboard/settings", icon: Settings }],
   },
 ];

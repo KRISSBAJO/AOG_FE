@@ -67,7 +67,10 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
                 <button className="block w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-slate-50">
                   Your profile
                 </button>
-                <button className="block w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-slate-50">
+                <button
+                  onClick={() => router.push("/dashboard/settings")}
+                  className="block w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
+                >
                   Workspace settings
                 </button>
                 <hr className="my-1 border-slate-100" />

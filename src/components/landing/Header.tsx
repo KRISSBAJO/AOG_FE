@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
+import { Logo } from "@/components/ui";
 
 const navLinks = [
   { label: "Platform", href: "/#platform" },
@@ -21,18 +22,9 @@ export default function Header() {
       className="sticky top-0 z-50 border-b border-white/10 bg-[#0B1120]/90 backdrop-blur"
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2">
-          <motion.span
-            whileHover={{ rotate: -8, scale: 1.08 }}
-            transition={{ type: "spring", stiffness: 300, damping: 15 }}
-            className="flex h-8 w-8 items-center justify-center rounded bg-amber-400 text-sm font-bold text-[#0B1120]"
-          >
-            AO
-          </motion.span>
-          <span className="text-lg font-semibold tracking-tight text-white">
-            AOG Services
-          </span>
-        </Link>
+        <motion.div whileHover={{ scale: 1.03 }} transition={{ type: "spring", stiffness: 300, damping: 18 }}>
+          <Logo variant="light" href="/" />
+        </motion.div>
 
         <nav className="hidden items-center gap-8 md:flex">
           {navLinks.map((link) => (
