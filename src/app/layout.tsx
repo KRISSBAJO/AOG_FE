@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import MotionProvider from "@/components/landing/motion/MotionProvider";
+import { ToastProvider } from "@/components/ui";
 
 const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -32,7 +33,9 @@ export default function RootLayout({
       className={`${plusJakarta.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-white">
-        <MotionProvider>{children}</MotionProvider>
+        <ToastProvider>
+          <MotionProvider>{children}</MotionProvider>
+        </ToastProvider>
       </body>
     </html>
   );

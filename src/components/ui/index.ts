@@ -8,3 +8,4 @@ export { Logo } from "./Logo";
 export { Divider } from "./Divider";
 export { Card, CardHeader } from "./Card";
 export { StatusBadge } from "./StatusBadge";
+export { ToastProvider } from "./ToastProvider";

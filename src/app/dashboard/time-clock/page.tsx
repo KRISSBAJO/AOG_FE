@@ -4,16 +4,10 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Camera, Clock3, LogIn, LogOut, RefreshCw } from "lucide-react";
 
 import { StatusPill } from "@/components/dashboard/StatusPill";
-import {
-  Alert,
-  Button,
-  Card,
-  CardHeader,
-  Checkbox,
-  Textarea,
-} from "@/components/ui";
+import { Button, Card, CardHeader, Checkbox, Textarea } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
 import { staffApi, type StaffMe } from "@/lib/api/staff";
+import { toast } from "@/lib/toast";
 
 const selectClass =
   "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40";
@@ -44,8 +38,6 @@ export default function TimeClockPage() {
   const [data, setData] = useState<StaffMe | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [clockInForm, setClockInForm] = useState({
     shiftId: "",
     workOrderId: "",
@@ -75,7 +67,6 @@ export default function TimeClockPage() {
 
   async function loadData() {
     setLoading(true);
-    setError(null);
     try {
       const response = await staffApi.me();
       setData(response);
@@ -96,7 +87,7 @@ export default function TimeClockPage() {
         workOrderId: current.workOrderId || fallbackWorkOrderId,
       }));
     } catch (err) {
-      setError(getErrorMessage(err));
+      toast.error(getErrorMessage(err), "Could not load time clock");
     } finally {
       setLoading(false);
     }
@@ -109,8 +100,6 @@ export default function TimeClockPage() {
   async function submitClockIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
-    setError(null);
-    setMessage(null);
     try {
       await staffApi.clockIn({
         shiftId: clockInForm.shiftId || undefined,
@@ -118,10 +107,10 @@ export default function TimeClockPage() {
         notes: clockInForm.notes || undefined,
       });
       setClockInForm((current) => ({ ...current, notes: "" }));
-      setMessage("Clock-in recorded.");
+      toast.success("Clock-in recorded.", "Clocked in");
       await loadData();
     } catch (err) {
-      setError(getErrorMessage(err));
+      toast.error(getErrorMessage(err), "Could not clock in");
     } finally {
       setSaving(false);
     }
@@ -130,8 +119,6 @@ export default function TimeClockPage() {
   async function submitClockOut(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
-    setError(null);
-    setMessage(null);
     try {
       const proofPhotoUrls = clockOutForm.proofPhotoUrls
         .split(/\n|,/)
@@ -154,12 +141,13 @@ export default function TimeClockPage() {
         proofPhotoUrls: "",
         completeWorkOrder: false,
       }));
-      setMessage(
+      toast.success(
         `Clock-out recorded with ${response.proofPhotosCreated} proof item(s).`,
+        "Clocked out",
       );
       await loadData();
     } catch (err) {
-      setError(getErrorMessage(err));
+      toast.error(getErrorMessage(err), "Could not clock out");
     } finally {
       setSaving(false);
     }
@@ -186,9 +174,6 @@ export default function TimeClockPage() {
           Refresh
         </Button>
       </div>
-
-      {error && <Alert tone="error">{error}</Alert>}
-      {message && <Alert tone="success">{message}</Alert>}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-6">
