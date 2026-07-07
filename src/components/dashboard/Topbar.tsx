@@ -15,7 +15,6 @@ import {
 import {
   type AuthUser,
   clearAuthSession,
-  getAccessToken,
   getMe,
   logout,
 } from "@/lib/auth";
@@ -27,11 +26,8 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
 
   useEffect(() => {
     let active = true;
-    const token = getAccessToken();
 
-    if (!token) return;
-
-    getMe(token)
+    getMe()
       .then((profile) => {
         if (active) setUser(profile);
       })

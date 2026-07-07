@@ -9,7 +9,6 @@ import { Logo } from "@/components/ui";
 import {
   type AuthUser,
   clearAuthSession,
-  getAccessToken,
   getMe,
   logout,
 } from "@/lib/auth";
@@ -20,6 +19,7 @@ const navLinks = [
   { label: "Modules", href: "/#modules" },
   { label: "Roles", href: "/#roles" },
   { label: "Workflow & AI", href: "/#workflow" },
+  { label: "Status", href: "/booking-status" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -30,11 +30,8 @@ export default function Header() {
 
   useEffect(() => {
     let active = true;
-    const token = getAccessToken();
 
-    if (!token) return;
-
-    getMe(token)
+    getMe()
       .then((profile) => {
         if (active) setUser(profile);
       })

@@ -1,5 +1,5 @@
 import { ApiError, apiRequest } from "../api";
-import { getAccessToken, getActiveWorkspaceId } from "../auth";
+import { getActiveWorkspaceId } from "../auth";
 
 export type QueryValue = string | number | boolean | null | undefined;
 export type Query = Record<string, QueryValue>;
@@ -27,10 +27,9 @@ export function withQuery(path: string, query?: Query) {
 }
 
 export function workspaceRequest<T>(path: string, init: RequestInit = {}) {
-  const token = getAccessToken();
   const workspaceId = getActiveWorkspaceId();
 
-  if (!token || !workspaceId) {
+  if (!workspaceId) {
     throw new ApiError(401, { message: "Sign in again to choose a workspace." });
   }
 
@@ -39,7 +38,6 @@ export function workspaceRequest<T>(path: string, init: RequestInit = {}) {
 
   return apiRequest<T>(path, {
     ...init,
-    token,
     headers,
   });
 }

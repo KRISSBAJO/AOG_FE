@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import { Clock, Mail, MapPin, Phone } from "lucide-react";
 import Header from "@/components/landing/Header";
 import Footer from "@/components/landing/Footer";
 import ContactForm from "@/components/landing/ContactForm";
 
 export const metadata: Metadata = {
-  title: "Contact | AOG Services",
+  title: "Request Service | AOG Services",
   description:
-    "Talk to the AOG Services team about running your cleaning, security, parking, and facility operations on one platform.",
+    "Request cleaning, security, parking, event setup, or facility support service from AOG Services.",
 };
 
 const channels = [
@@ -30,8 +30,8 @@ const channels = [
   },
   {
     icon: Clock,
-    label: "Response time",
-    value: "Within one business day",
+    label: "Public tracking",
+    value: "Order number issued instantly",
   },
 ];
 
@@ -40,33 +40,30 @@ export default function ContactPage() {
     <div className="flex min-h-full flex-col">
       <Header />
       <main className="flex-1">
-        {/* Hero band */}
         <section className="bg-[#0B1120] pb-28 pt-20">
           <div className="mx-auto max-w-7xl px-6 text-center lg:px-8">
             <span className="text-sm font-semibold uppercase tracking-wide text-amber-300">
-              Contact
+              Request service
             </span>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-              Let&apos;s map AOG OS to your operation
+              Book facility service
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-300">
-              Tell us about your service lines and facility count. We&apos;ll walk
-              you through the modules that matter and answer any questions.
+              Tell us what service you need. We will create a trackable order
+              number and route the request to operations.
             </p>
           </div>
         </section>
 
-        {/* Split content — form overlaps up into the hero */}
         <section className="bg-slate-50 pb-24">
           <div className="mx-auto -mt-16 grid max-w-7xl grid-cols-1 gap-10 px-6 lg:grid-cols-[1fr_1.2fr] lg:px-8">
-            {/* Left: contact channels */}
             <div className="lg:pt-16">
               <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-                Talk to our team
+                Service support
               </h2>
               <p className="mt-3 text-base leading-7 text-slate-600">
-                Prefer to reach us directly? Use any of the channels below —
-                a real person on our operations team will get back to you.
+                Prefer to reach us directly? Use any channel below. For
+                trackable service, submit the request form.
               </p>
 
               <div className="mt-8 space-y-5">
@@ -102,7 +99,6 @@ export default function ContactPage() {
               </div>
             </div>
 
-            {/* Right: the form */}
             <div>
               <ContactForm />
             </div>

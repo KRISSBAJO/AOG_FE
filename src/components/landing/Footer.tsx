@@ -24,7 +24,8 @@ const columns = [
     links: [
       { label: "About", href: "/#platform" },
       { label: "Careers", href: "/contact" },
-      { label: "Contact", href: "/contact" },
+      { label: "Request service", href: "/contact" },
+      { label: "Booking status", href: "/booking-status" },
     ],
   },
 ];
@@ -39,7 +40,7 @@ export default function Footer() {
               AO
             </span>
             <p className="mt-4 text-sm leading-6 text-slate-400">
-              AOG Services — Enterprise Facilities Operations Management
+              AOG Services - Enterprise Facilities Operations Management
               Platform.
             </p>
           </div>
@@ -64,7 +65,7 @@ export default function Footer() {
           ))}
         </div>
         <div className="mt-12 border-t border-white/10 pt-8 text-sm text-slate-500">
-          © {new Date().getFullYear()} AOG Services. All rights reserved.
+          (c) {new Date().getFullYear()} AOG Services. All rights reserved.
         </div>
       </div>
     </footer>

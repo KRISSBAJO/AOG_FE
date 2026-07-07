@@ -3,22 +3,18 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { getAccessToken, getMe, clearAuthSession } from "@/lib/auth";
+import { getMe, clearAuthSession, saveWorkspaceFromUser } from "@/lib/auth";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
-    const token = getAccessToken();
-
-    if (!token) {
-      router.replace("/sign-in");
-      return;
-    }
-
-    getMe(token)
-      .then(() => setAllowed(true))
+    getMe()
+      .then((user) => {
+        saveWorkspaceFromUser(user);
+        setAllowed(true);
+      })
       .catch(() => {
         clearAuthSession();
         router.replace("/sign-in");
@@ -35,4 +31,3 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
-

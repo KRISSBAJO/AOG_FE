@@ -1,7 +1,7 @@
 import { apiRequest } from "./api";
 
-const ACCESS_TOKEN_KEY = "aog.accessToken";
-const REFRESH_TOKEN_KEY = "aog.refreshToken";
+const LEGACY_ACCESS_TOKEN_KEY = "aog.accessToken";
+const LEGACY_REFRESH_TOKEN_KEY = "aog.refreshToken";
 const WORKSPACE_ID_KEY = "aog.activeWorkspaceId";
 
 export type AuthUser = {
@@ -10,11 +10,15 @@ export type AuthUser = {
   displayName: string;
   phone?: string | null;
   isSiteAdmin: boolean;
+  memberships?: Array<{
+    workspaceId: string;
+    workspace?: { id: string; name: string; slug?: string | null };
+  }>;
 };
 
 export type AuthResponse = {
-  accessToken: string;
-  refreshToken: string;
+  accessTokenExpiresAt?: string;
+  refreshTokenExpiresAt?: string;
   activeWorkspaceId?: string;
   user: AuthUser;
 };
@@ -24,34 +28,26 @@ export type ForgotPasswordResponse = {
   resetToken?: string;
 };
 
-export function getAccessToken() {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
-}
-
-export function getRefreshToken() {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(REFRESH_TOKEN_KEY);
-}
-
 export function getActiveWorkspaceId() {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(WORKSPACE_ID_KEY);
 }
 
 export function saveAuthSession(session: AuthResponse) {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, session.accessToken);
-  window.localStorage.setItem(REFRESH_TOKEN_KEY, session.refreshToken);
+  window.localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
+  window.localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
 
-  if (session.activeWorkspaceId) {
-    window.localStorage.setItem(WORKSPACE_ID_KEY, session.activeWorkspaceId);
+  const workspaceId = resolveWorkspaceId(session);
+
+  if (workspaceId) {
+    window.localStorage.setItem(WORKSPACE_ID_KEY, workspaceId);
   }
 }
 
 export function clearAuthSession() {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-  window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+  window.localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
+  window.localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
   window.localStorage.removeItem(WORKSPACE_ID_KEY);
 }
 
@@ -59,6 +55,7 @@ export function signIn(email: string, password: string) {
   return apiRequest<AuthResponse>("/auth/sign-in", {
     method: "POST",
     body: JSON.stringify({ email, password }),
+    skipAuthRefresh: true,
   });
 }
 
@@ -71,6 +68,7 @@ export function signUp(input: {
   return apiRequest<AuthResponse>("/auth/sign-up", {
     method: "POST",
     body: JSON.stringify(input),
+    skipAuthRefresh: true,
   });
 }
 
@@ -88,21 +86,30 @@ export function resetPassword(token: string, password: string) {
   });
 }
 
-export function getMe(token: string) {
+export function getMe(token?: string | null) {
   return apiRequest<AuthUser>("/auth/me", {
     token,
   });
 }
 
 export async function logout() {
-  const refreshToken = getRefreshToken();
   clearAuthSession();
-
-  if (!refreshToken) return;
 
   await apiRequest("/auth/logout", {
     method: "POST",
-    body: JSON.stringify({ refreshToken }),
+    body: JSON.stringify({}),
+    skipAuthRefresh: true,
   }).catch(() => undefined);
 }
 
+export function saveWorkspaceFromUser(user: AuthUser) {
+  if (typeof window === "undefined") return;
+  const workspaceId = user.memberships?.[0]?.workspaceId;
+  if (workspaceId && !window.localStorage.getItem(WORKSPACE_ID_KEY)) {
+    window.localStorage.setItem(WORKSPACE_ID_KEY, workspaceId);
+  }
+}
+
+function resolveWorkspaceId(session: AuthResponse) {
+  return session.activeWorkspaceId ?? session.user.memberships?.[0]?.workspaceId;
+}
