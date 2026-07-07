@@ -4,10 +4,10 @@ const columns = [
   {
     title: "Platform",
     links: [
-      { label: "Contract Management", href: "/#modules" },
-      { label: "Facility Management", href: "/#modules" },
-      { label: "Scheduling & Dispatch", href: "/#modules" },
-      { label: "Finance & Billing", href: "/#modules" },
+      { label: "Platform overview", href: "/#platform" },
+      { label: "Modules", href: "/#modules" },
+      { label: "Roles", href: "/#roles" },
+      { label: "Workflow & AI", href: "/#workflow" },
     ],
   },
   {
@@ -23,7 +23,7 @@ const columns = [
     title: "Company",
     links: [
       { label: "About", href: "/#platform" },
-      { label: "Careers", href: "/contact" },
+      { label: "Contact", href: "/contact" },
       { label: "Request service", href: "/contact" },
       { label: "Booking status", href: "/booking-status" },
     ],

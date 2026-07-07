@@ -18,9 +18,6 @@ const navLinks = [
   { label: "Features", href: "/#features" },
   { label: "Modules", href: "/#modules" },
   { label: "Roles", href: "/#roles" },
-  { label: "Workflow & AI", href: "/#workflow" },
-  { label: "Status", href: "/booking-status" },
-  { label: "Contact", href: "/contact" },
 ];
 
 export default function Header() {
