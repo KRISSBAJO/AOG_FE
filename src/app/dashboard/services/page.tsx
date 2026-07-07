@@ -1,9 +1,20 @@
 "use client";
 
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  Dispatch,
+  FormEvent,
+  ReactNode,
+  SetStateAction,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
+  Check,
+  ChevronDown,
   DollarSign,
+  Edit3,
   Layers,
   MapPinned,
   Plus,
@@ -11,9 +22,11 @@ import {
   Search,
   Sparkles,
   Tag,
+  Trash2,
+  X,
 } from "lucide-react";
 
-import { Alert, Button, Card, CardHeader, Input, Select } from "@/components/ui";
+import { Alert, Button, Card, CardHeader, Input, Select, Textarea } from "@/components/ui";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Drawer, DrawerSection } from "@/components/dashboard/Drawer";
 import { getErrorMessage } from "@/lib/api";
@@ -79,8 +92,13 @@ export default function ServicesPage() {
   const [areaSaving, setAreaSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [categorySearch, setCategorySearch] = useState("");
 
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [categoryMode, setCategoryMode] = useState<"create" | "edit">("create");
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [categoryDeletingId, setCategoryDeletingId] = useState<string | null>(null);
   const [serviceOpen, setServiceOpen] = useState(false);
   const [priceOpen, setPriceOpen] = useState(false);
   const [areaOpen, setAreaOpen] = useState(false);
@@ -94,6 +112,11 @@ export default function ServicesPage() {
   const activeServices = useMemo(
     () => services.filter((service) => service.isActive),
     [services],
+  );
+
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.id === serviceForm.categoryId),
+    [categories, serviceForm.categoryId],
   );
 
   async function loadData(nextSearch = search) {
@@ -131,29 +154,105 @@ export default function ServicesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function createCategory(event: FormEvent<HTMLFormElement>) {
+  function openCreateCategoryModal() {
+    setError(null);
+    setCategoryMode("create");
+    setEditingCategoryId(null);
+    setCategoryForm({
+      ...emptyCategoryForm,
+      serviceLine: serviceForm.serviceLine || "CLEANING",
+    });
+    setCategoryOpen(true);
+  }
+
+  function openEditCategoryModal(category: ServiceCategory) {
+    setError(null);
+    setCategoryMode("edit");
+    setEditingCategoryId(category.id);
+    setCategoryForm({
+      name: category.name,
+      serviceLine: category.serviceLine,
+      description: category.description ?? "",
+    });
+    setCategoryOpen(true);
+  }
+
+  function closeCategoryModal() {
+    setCategoryOpen(false);
+    setEditingCategoryId(null);
+    setCategoryForm(emptyCategoryForm);
+  }
+
+  async function saveCategory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setError(null);
 
     try {
-      const category = await phase3Api.createServiceCategory({
+      const payload = {
         ...categoryForm,
         description: categoryForm.description || undefined,
-      });
+      };
+      const category =
+        categoryMode === "edit" && editingCategoryId
+          ? await phase3Api.updateServiceCategory(editingCategoryId, payload)
+          : await phase3Api.createServiceCategory(payload);
+
       setCategoryForm(emptyCategoryForm);
       setServiceForm((form) => ({
         ...form,
-        categoryId: category.id,
-        serviceLine: category.serviceLine,
+        categoryId:
+          categoryMode === "create" || form.categoryId === category.id
+            ? category.id
+            : form.categoryId,
+        serviceLine:
+          categoryMode === "create" || form.categoryId === category.id
+            ? category.serviceLine
+            : form.serviceLine,
       }));
       setCategoryOpen(false);
-      toast.success(`${category.name} was added.`, "Category created");
+      setEditingCategoryId(null);
+      toast.success(
+        categoryMode === "edit"
+          ? `${category.name} was updated.`
+          : `${category.name} was added and selected.`,
+        categoryMode === "edit" ? "Category updated" : "Category created",
+      );
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function deleteCategory(category: ServiceCategory) {
+    const serviceCount = category._count?.services ?? 0;
+    const confirmed = window.confirm(
+      serviceCount > 0
+        ? `Archive ${category.name}? ${serviceCount} services currently use this category.`
+        : `Archive ${category.name}?`,
+    );
+
+    if (!confirmed) return;
+
+    setCategoryDeletingId(category.id);
+    setError(null);
+
+    try {
+      await phase3Api.deactivateServiceCategory(category.id);
+      if (serviceForm.categoryId === category.id) {
+        setServiceForm((form) => ({ ...form, categoryId: "" }));
+      }
+      if (editingCategoryId === category.id) {
+        closeCategoryModal();
+      }
+      toast.success(`${category.name} was archived.`, "Category archived");
+      await loadData(search);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setCategoryDeletingId(null);
     }
   }
 
@@ -271,7 +370,7 @@ export default function ServicesPage() {
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </form>
-            <Button variant="outline" onClick={() => setCategoryOpen(true)}>
+            <Button variant="outline" onClick={openCreateCategoryModal}>
               <Layers className="h-4 w-4" />
               Category
             </Button>
@@ -369,40 +468,19 @@ export default function ServicesPage() {
         </div>
       </Card>
 
-      {/* New category */}
-      <Drawer
+      <CategoryModal
         open={categoryOpen}
-        onClose={() => setCategoryOpen(false)}
-        title="New category"
-        description="Group related services under a service line."
-        icon={Layers}
-      >
-        <form onSubmit={createCategory} className="flex h-full flex-col">
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
-            {error && <Alert tone="error">{error}</Alert>}
-            <Input
-              label="Name"
-              value={categoryForm.name}
-              onChange={(event) =>
-                setCategoryForm((form) => ({ ...form, name: event.target.value }))
-              }
-              placeholder="Daily janitorial"
-              required
-            />
-            <Select
-              label="Service line"
-              options={serviceLineOptions}
-              value={categoryForm.serviceLine}
-              onChange={(event) =>
-                setCategoryForm((form) => ({ ...form, serviceLine: event.target.value }))
-              }
-            />
-          </div>
-          <DrawerFooter onCancel={() => setCategoryOpen(false)} loading={saving}>
-            Save category
-          </DrawerFooter>
-        </form>
-      </Drawer>
+        mode={categoryMode}
+        form={categoryForm}
+        saving={saving}
+        error={error}
+        editingCategory={categories.find((category) => category.id === editingCategoryId)}
+        deleting={editingCategoryId === categoryDeletingId}
+        onClose={closeCategoryModal}
+        onSubmit={saveCategory}
+        onDelete={(category) => void deleteCategory(category)}
+        onChange={setCategoryForm}
+      />
 
       {/* New service */}
       <Drawer
@@ -416,17 +494,19 @@ export default function ServicesPage() {
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
             {error && <Alert tone="error">{error}</Alert>}
             <DrawerSection title="Definition">
-              <Select
-                label="Category"
-                options={[
-                  { value: "", label: "No category" },
-                  ...categories.map((category) => ({
-                    value: category.id,
-                    label: category.name,
-                  })),
-                ]}
+              <CategoryPicker
+                categories={categories}
                 value={serviceForm.categoryId}
-                onChange={(event) => updateServiceCategory(event.target.value)}
+                selectedCategory={selectedCategory}
+                search={categorySearch}
+                onSearchChange={setCategorySearch}
+                open={categoryPickerOpen}
+                onOpenChange={setCategoryPickerOpen}
+                onSelect={updateServiceCategory}
+                onCreate={openCreateCategoryModal}
+                onEdit={openEditCategoryModal}
+                onDelete={deleteCategory}
+                deletingCategoryId={categoryDeletingId}
               />
               <Input
                 label="Name"
@@ -609,6 +689,288 @@ export default function ServicesPage() {
           </DrawerFooter>
         </form>
       </Drawer>
+    </div>
+  );
+}
+
+function CategoryPicker({
+  categories,
+  value,
+  selectedCategory,
+  search,
+  open,
+  deletingCategoryId,
+  onSearchChange,
+  onOpenChange,
+  onSelect,
+  onCreate,
+  onEdit,
+  onDelete,
+}: {
+  categories: ServiceCategory[];
+  value: string;
+  selectedCategory?: ServiceCategory;
+  search: string;
+  open: boolean;
+  deletingCategoryId?: string | null;
+  onSearchChange: (value: string) => void;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (categoryId: string) => void;
+  onCreate: () => void;
+  onEdit: (category: ServiceCategory) => void;
+  onDelete: (category: ServiceCategory) => void;
+}) {
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredCategories = categories.filter((category) => {
+    if (!normalizedSearch) return true;
+    return [category.name, category.description, category.serviceLine]
+      .filter(Boolean)
+      .some((field) => String(field).toLowerCase().includes(normalizedSearch));
+  });
+
+  return (
+    <div className="relative">
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <label className="text-sm font-medium text-slate-700">Category</label>
+        <button
+          type="button"
+          onClick={onCreate}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-left text-sm text-slate-900 transition-colors hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+      >
+        <span className="min-w-0">
+          <span className="block truncate font-medium">
+            {selectedCategory?.name ?? "No category"}
+          </span>
+          <span className="block truncate text-xs text-slate-400">
+            {selectedCategory
+              ? enumLabel(selectedCategory.serviceLine)
+              : "Select an existing category or add one"}
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+      </button>
+
+      {open && (
+        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/12">
+          <div className="border-b border-slate-100 p-3">
+            <Input
+              value={search}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="Search categories"
+              icon={<Search className="h-4 w-4" />}
+              autoFocus
+            />
+          </div>
+          <div className="max-h-72 overflow-y-auto p-2">
+            <button
+              type="button"
+              onClick={() => {
+                onSelect("");
+                onOpenChange(false);
+              }}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-slate-50"
+            >
+              <span>
+                <span className="block font-medium text-slate-800">No category</span>
+                <span className="block text-xs text-slate-400">
+                  Keep this service uncategorized
+                </span>
+              </span>
+              {!value && <Check className="h-4 w-4 text-emerald-500" />}
+            </button>
+
+            {filteredCategories.map((category) => {
+              const active = value === category.id;
+              return (
+                <div
+                  key={category.id}
+                  className="group flex items-center gap-2 rounded-lg px-3 py-2.5 hover:bg-slate-50"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelect(category.id);
+                      onOpenChange(false);
+                    }}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-slate-900">
+                        {category.name}
+                      </span>
+                      {active && <Check className="h-4 w-4 shrink-0 text-emerald-500" />}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-slate-400">
+                      {enumLabel(category.serviceLine)}
+                      {category._count?.services ? ` · ${category._count.services} services` : ""}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onEdit(category)}
+                    className="rounded-md p-2 text-slate-400 hover:bg-white hover:text-slate-700"
+                    aria-label={`Edit ${category.name}`}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(category)}
+                    disabled={deletingCategoryId === category.id}
+                    className="rounded-md p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    aria-label={`Archive ${category.name}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
+
+            {!filteredCategories.length && (
+              <div className="px-3 py-8 text-center">
+                <p className="text-sm font-medium text-slate-900">No categories found</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Add a category to organize this service line.
+                </p>
+                <Button type="button" size="sm" className="mt-3" onClick={onCreate}>
+                  <Plus className="h-4 w-4" />
+                  Add category
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CategoryModal({
+  open,
+  mode,
+  form,
+  saving,
+  deleting,
+  error,
+  editingCategory,
+  onClose,
+  onSubmit,
+  onDelete,
+  onChange,
+}: {
+  open: boolean;
+  mode: "create" | "edit";
+  form: typeof emptyCategoryForm;
+  saving: boolean;
+  deleting?: boolean;
+  error?: string | null;
+  editingCategory?: ServiceCategory;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onDelete: (category: ServiceCategory) => void;
+  onChange: Dispatch<SetStateAction<typeof emptyCategoryForm>>;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-8 backdrop-blur-sm">
+      <form
+        onSubmit={onSubmit}
+        className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <Layers className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-base font-semibold text-slate-950">
+                {mode === "edit" ? "Edit category" : "Add category"}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {mode === "edit"
+                  ? "Update the category name, service line, or description."
+                  : "Create a category and use it in the service form."}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Close category modal"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4 px-5 py-5">
+          {error && <Alert tone="error">{error}</Alert>}
+          <Input
+            label="Name"
+            value={form.name}
+            onChange={(event) =>
+              onChange((current) => ({ ...current, name: event.target.value }))
+            }
+            placeholder="Daily janitorial"
+            required
+            autoFocus
+          />
+          <Select
+            label="Service line"
+            options={serviceLineOptions}
+            value={form.serviceLine}
+            onChange={(event) =>
+              onChange((current) => ({ ...current, serviceLine: event.target.value }))
+            }
+          />
+          <Textarea
+            label="Description"
+            value={form.description}
+            onChange={(event) =>
+              onChange((current) => ({ ...current, description: event.target.value }))
+            }
+            placeholder="Optional notes for dispatch and quoting"
+            rows={3}
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            {mode === "edit" && editingCategory && (
+              <Button
+                type="button"
+                variant="ghost"
+                loading={deleting}
+                onClick={() => onDelete(editingCategory)}
+                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+                Archive
+              </Button>
+            )}
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={saving}>
+              <Plus className="h-4 w-4" />
+              {mode === "edit" ? "Save changes" : "Create category"}
+            </Button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }
