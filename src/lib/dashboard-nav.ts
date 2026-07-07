@@ -36,12 +36,17 @@ export const navSections: NavSection[] = [
     items: [{ label: "Overview", href: "/dashboard", icon: LayoutDashboard }],
   },
   {
-    title: "Operations",
+    title: "Customer Ops",
     items: [
       { label: "Customers", href: "/dashboard/customers", icon: BriefcaseBusiness },
       { label: "Facilities", href: "/dashboard/facilities", icon: Building2 },
       { label: "Services", href: "/dashboard/services", icon: Sparkles },
       { label: "Contracts", href: "/dashboard/contracts", icon: FileText },
+    ],
+  },
+  {
+    title: "Field Ops",
+    items: [
       { label: "Service Requests", href: "/dashboard/service-requests", icon: ClipboardList },
       { label: "Work Orders", href: "/dashboard/work-orders", icon: Wrench },
       { label: "Scheduling", href: "/dashboard/scheduling", icon: CalendarClock },

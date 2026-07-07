@@ -32,23 +32,17 @@ export function Sidebar({
     () => navSections.find((section) => section.items.some((item) => item.label === active))?.title,
     [active],
   );
-  const [openSections, setOpenSections] = useState<string[]>(() => (
-    sectionTitles.includes("Operations") ? ["Operations"] : sectionTitles.slice(0, 1)
+  const [openSection, setOpenSection] = useState<string>(() => (
+    activeSection ?? (sectionTitles.includes("Customer Ops") ? "Customer Ops" : sectionTitles[0] ?? "")
   ));
 
   useEffect(() => {
     if (!activeSection) return;
-    setOpenSections((current) => (
-      current.includes(activeSection) ? current : [...current, activeSection]
-    ));
+    setOpenSection(activeSection);
   }, [activeSection]);
 
   function toggleSection(title: string) {
-    setOpenSections((current) => (
-      current.includes(title)
-        ? current.filter((item) => item !== title)
-        : [...current, title]
-    ));
+    setOpenSection((current) => (current === title ? "" : title));
   }
 
   return (
@@ -98,7 +92,7 @@ export function Sidebar({
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           {navSections.map((section, sectionIndex) => {
             const title = section.title;
-            const isOpen = !title || collapsed || openSections.includes(title);
+            const isOpen = !title || collapsed || openSection === title;
 
             return (
               <div key={title ?? `section-${sectionIndex}`} className="mb-2">
