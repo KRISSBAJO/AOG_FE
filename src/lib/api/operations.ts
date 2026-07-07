@@ -43,6 +43,8 @@ export const operationsApi = {
       method: "POST",
       body: jsonBody(input),
     }),
+  getServiceRequest: (id: string) =>
+    workspaceRequest<ServiceRequest>(`/service-requests/${id}`),
   addServiceRequestItem: (id: string, input: Record<string, unknown>) =>
     workspaceRequest(`/service-requests/${id}/items`, {
       method: "POST",
@@ -65,6 +67,7 @@ export const operationsApi = {
       method: "POST",
       body: jsonBody(input),
     }),
+  getWorkOrder: (id: string) => workspaceRequest<WorkOrder>(`/work-orders/${id}`),
   updateWorkOrderStatus: (id: string, input: Record<string, unknown>) =>
     workspaceRequest<WorkOrder>(`/work-orders/${id}/status`, {
       method: "PATCH",

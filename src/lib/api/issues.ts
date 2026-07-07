@@ -50,6 +50,7 @@ export const issuesApi = {
     workspaceRequest<ListResponse<Complaint>>(withQuery("/complaints", query)),
   createComplaint: (input: Record<string, unknown>) =>
     workspaceRequest<Complaint>("/complaints", { method: "POST", body: jsonBody(input) }),
+  getComplaint: (id: string) => workspaceRequest<Complaint>(`/complaints/${id}`),
   updateComplaint: (id: string, input: Record<string, unknown>) =>
     workspaceRequest<Complaint>(`/complaints/${id}`, { method: "PATCH", body: jsonBody(input) }),
   updateComplaintStatus: (id: string, input: Record<string, unknown>) =>
@@ -75,6 +76,7 @@ export const issuesApi = {
     workspaceRequest<ListResponse<Incident>>(withQuery("/incidents", query)),
   createIncident: (input: Record<string, unknown>) =>
     workspaceRequest<Incident>("/incidents", { method: "POST", body: jsonBody(input) }),
+  getIncident: (id: string) => workspaceRequest<Incident>(`/incidents/${id}`),
   updateIncident: (id: string, input: Record<string, unknown>) =>
     workspaceRequest<Incident>(`/incidents/${id}`, { method: "PATCH", body: jsonBody(input) }),
 };

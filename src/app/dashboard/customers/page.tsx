@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, RefreshCw, Search, UserRoundPlus } from "lucide-react";
 
 import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
@@ -12,6 +13,7 @@ const selectClass =
   "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40";
 
 export default function CustomersPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -181,7 +183,7 @@ export default function CustomersPage() {
                   <tr
                     key={customer.id}
                     className="cursor-pointer hover:bg-slate-50"
-                    onClick={() => setSelectedCustomerId(customer.id)}
+                    onClick={() => router.push(`/dashboard/customers/detail?id=${customer.id}`)}
                   >
                     <td className="px-5 py-3.5">
                       <p className="font-medium text-slate-900">{customer.name}</p>

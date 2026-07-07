@@ -6,13 +6,7 @@ import { Banknote, Clock3, RefreshCw, Users } from "lucide-react";
 import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
 import { payrollApi, type PayrollSummary } from "@/lib/api/staff";
-
-function money(value: string | number | null | undefined) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(Number(value ?? 0));
-}
+import { formatMoney } from "@/lib/formatters";
 
 function dateInput(value?: string) {
   if (!value) return "";
@@ -121,7 +115,7 @@ export default function PayrollPage() {
         <Card className="p-5">
           <Banknote className="h-5 w-5 text-amber-500" />
           <p className="mt-4 text-2xl font-semibold text-slate-900">
-            {money(summary?.totals.grossPay)}
+            {formatMoney(summary?.totals.grossPay)}
           </p>
           <p className="mt-1 text-sm text-slate-500">Estimated gross pay</p>
         </Card>
@@ -170,10 +164,10 @@ export default function PayrollPage() {
                     {row.hours}
                   </td>
                   <td className="px-5 py-3.5 text-slate-600">
-                    {money(row.hourlyRate)}
+                    {formatMoney(row.hourlyRate)}
                   </td>
                   <td className="px-5 py-3.5 font-semibold text-slate-900">
-                    {money(row.grossPay)}
+                    {formatMoney(row.grossPay)}
                   </td>
                   <td className="px-5 py-3.5 text-slate-600">
                     {row.openRecords}

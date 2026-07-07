@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Plus,
@@ -30,6 +31,7 @@ const serviceLines = [
 const priorities = ["LOW", "NORMAL", "HIGH", "URGENT", "EMERGENCY"];
 
 export default function ServiceRequestsPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -212,12 +214,9 @@ export default function ServiceRequestsPage() {
                 {requests.map((request) => (
                   <tr
                     key={request.id}
-                    className="hover:bg-slate-50"
+                    className="cursor-pointer hover:bg-slate-50"
                     onClick={() =>
-                      setItemForm((current) => ({
-                        ...current,
-                        requestId: request.id,
-                      }))
+                      router.push(`/dashboard/service-requests/detail?id=${request.id}`)
                     }
                   >
                     <td className="px-5 py-3.5">

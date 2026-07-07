@@ -5,7 +5,8 @@ const columns = [
     title: "Platform",
     links: [
       { label: "Platform overview", href: "/#platform" },
-      { label: "Modules", href: "/#modules" },
+      { label: "Services", href: "/#services" },
+      { label: "All modules", href: "/modules" },
       { label: "Roles", href: "/#roles" },
       { label: "Workflow & AI", href: "/#workflow" },
     ],

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CalendarClock, CheckCircle2, Plus, RefreshCw } from "lucide-react";
 
 import { StatusPill } from "@/components/dashboard/StatusPill";
@@ -16,6 +17,7 @@ const serviceLines = ["CLEANING", "SECURITY", "PARKING", "EVENT_SETUP", "FACILIT
 const leaveTypes = ["ANNUAL", "SICK", "EMERGENCY", "UNPAID", "MATERNITY", "PATERNITY", "OTHER"];
 
 export default function SchedulingPage() {
+  const router = useRouter();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -174,13 +176,13 @@ export default function SchedulingPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {shifts.map((shift) => (
-                  <tr key={shift.id} className="hover:bg-slate-50" onClick={() => setAssignmentForm((current) => ({ ...current, shiftId: shift.id }))}>
+                  <tr key={shift.id} className="cursor-pointer hover:bg-slate-50" onClick={() => router.push(`/dashboard/scheduling/detail?id=${shift.id}`)}>
                     <td className="px-5 py-3.5"><p className="font-medium text-slate-900">{shift.title}</p><p className="text-xs text-slate-400">{shift.serviceLine.replaceAll("_", " ").toLowerCase()}</p></td>
                     <td className="px-5 py-3.5 text-slate-600">{shift.department?.name || "Not set"}</td>
                     <td className="px-5 py-3.5 text-slate-600">{new Date(shift.startAt).toLocaleString()}</td>
                     <td className="px-5 py-3.5 text-slate-600">{shift.assignments?.length ?? 0}/{shift.requiredStaffCount}</td>
                     <td className="px-5 py-3.5"><StatusPill status={shift.status} /></td>
-                    <td className="px-5 py-3.5"><Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => void completeShift(shift.id)}><CheckCircle2 className="h-4 w-4" /></Button></td>
+                    <td className="px-5 py-3.5"><Button type="button" size="sm" variant="ghost" disabled={saving} onClick={(event) => { event.stopPropagation(); void completeShift(shift.id); }}><CheckCircle2 className="h-4 w-4" /></Button></td>
                   </tr>
                 ))}
                 {!loading && shifts.length === 0 && <tr><td className="px-5 py-8 text-center text-slate-500" colSpan={6}>No shifts found.</td></tr>}

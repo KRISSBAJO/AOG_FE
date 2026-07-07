@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Clock, Plus, RefreshCw, Search } from "lucide-react";
 
 import { StatusPill } from "@/components/dashboard/StatusPill";
@@ -16,6 +17,7 @@ const selectClass =
 const serviceLines = ["CLEANING", "SECURITY", "PARKING", "EVENT_SETUP", "FACILITY_SUPPORT", "OTHER"];
 
 export default function WorkOrdersPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -171,7 +173,7 @@ export default function WorkOrdersPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {workOrders.map((workOrder) => (
-                  <tr key={workOrder.id} className="hover:bg-slate-50" onClick={() => { setTaskForm((current) => ({ ...current, workOrderId: workOrder.id })); setAssignmentForm((current) => ({ ...current, workOrderId: workOrder.id })); }}>
+                  <tr key={workOrder.id} className="cursor-pointer hover:bg-slate-50" onClick={() => router.push(`/dashboard/work-orders/detail?id=${workOrder.id}`)}>
                     <td className="px-5 py-3.5"><p className="font-medium text-slate-900">{workOrder.title}</p><p className="text-xs text-slate-400">{workOrder.workOrderNumber}</p></td>
                     <td className="px-5 py-3.5 text-slate-600">{workOrder.customer?.name || "Not set"}</td>
                     <td className="px-5 py-3.5 text-slate-600">{workOrder.scheduledStartAt ? new Date(workOrder.scheduledStartAt).toLocaleString() : "Not scheduled"}</td>
@@ -180,8 +182,8 @@ export default function WorkOrdersPage() {
                     <td className="px-5 py-3.5"><StatusPill status={workOrder.status} /></td>
                     <td className="px-5 py-3.5">
                       <div className="flex gap-2">
-                        <Button type="button" size="sm" variant="ghost" disabled={actionId === workOrder.id} onClick={() => void setStatus(workOrder.id, "IN_PROGRESS")}><Clock className="h-4 w-4" /></Button>
-                        <Button type="button" size="sm" variant="outline" disabled={actionId === workOrder.id} onClick={() => void setStatus(workOrder.id, "COMPLETED")}><CheckCircle2 className="h-4 w-4" /></Button>
+                        <Button type="button" size="sm" variant="ghost" disabled={actionId === workOrder.id} onClick={(event) => { event.stopPropagation(); void setStatus(workOrder.id, "IN_PROGRESS"); }}><Clock className="h-4 w-4" /></Button>
+                        <Button type="button" size="sm" variant="outline" disabled={actionId === workOrder.id} onClick={(event) => { event.stopPropagation(); void setStatus(workOrder.id, "COMPLETED"); }}><CheckCircle2 className="h-4 w-4" /></Button>
                       </div>
                     </td>
                   </tr>

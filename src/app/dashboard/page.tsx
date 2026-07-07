@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -20,14 +21,7 @@ import { StatusPill } from "@/components/dashboard/StatusPill";
 import { Alert, Button, Card, CardHeader } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
 import { DashboardOverview, DashboardRevenue, DashboardWorkOrders, dashboardApi } from "@/lib/api/dashboard";
-
-function formatMoney(value: string | number | null | undefined) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(Number(value ?? 0));
-}
+import { formatMoney, toNumber } from "@/lib/formatters";
 
 function countOf(item: { _count?: { _all?: number } }) {
   return Number(item._count?._all ?? 0);
@@ -47,6 +41,7 @@ const statusColors = ["#F59E0B", "#0EA5E9", "#10B981", "#8B5CF6", "#EF4444", "#6
 const priorityColors = ["#EF4444", "#F59E0B", "#0EA5E9", "#10B981", "#64748B"];
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [workOrders, setWorkOrders] = useState<DashboardWorkOrders | null>(null);
   const [revenue, setRevenue] = useState<DashboardRevenue | null>(null);
@@ -93,7 +88,7 @@ export default function DashboardPage() {
   const revenueTrend = useMemo(
     () => (revenue?.monthly ?? []).slice(-6).map((item) => ({
       label: item.month,
-      value: Number(item.amount ?? 0),
+      value: toNumber(item.amount),
       color: "#F59E0B",
     })),
     [revenue],
@@ -295,7 +290,11 @@ export default function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {(overview?.recentWorkOrders ?? []).map((workOrder) => (
-                  <tr key={workOrder.id} className="hover:bg-slate-50/80">
+                  <tr
+                    key={workOrder.id}
+                    className="cursor-pointer hover:bg-slate-50/80"
+                    onClick={() => router.push(`/dashboard/work-orders/detail?id=${workOrder.id}`)}
+                  >
                     <td className="px-5 py-4">
                       <p className="font-bold text-slate-950">{workOrder.title}</p>
                       <p className="text-xs text-slate-400">{workOrder.workOrderNumber}</p>

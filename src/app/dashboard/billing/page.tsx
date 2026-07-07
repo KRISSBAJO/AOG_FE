@@ -9,6 +9,7 @@ import { getErrorMessage } from "@/lib/api";
 import { billingApi, Invoice, Payment } from "@/lib/api/billing";
 import { operationsApi, WorkOrder } from "@/lib/api/operations";
 import { Customer, phase3Api, Service } from "@/lib/phase3-api";
+import { formatMoney, toNumber } from "@/lib/formatters";
 
 const selectClass =
   "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40";
@@ -189,9 +190,9 @@ export default function BillingPage() {
                     <tr key={invoice.id} className={`hover:bg-slate-50 ${invoice.id === selectedInvoiceId ? "bg-amber-50" : ""}`} onClick={() => setSelectedInvoiceId(invoice.id)}>
                       <td className="px-5 py-3.5"><p className="font-medium text-slate-900">{invoice.invoiceNumber}</p><p className="text-xs text-slate-400">{invoice.dueDate ? `Due ${new Date(invoice.dueDate).toLocaleDateString()}` : "No due date"}</p></td>
                       <td className="px-5 py-3.5 text-slate-600">{invoice.customer?.name || "Not set"}</td>
-                      <td className="px-5 py-3.5 text-slate-600">{invoice.currency} {invoice.total}</td>
-                      <td className="px-5 py-3.5 text-slate-600">{invoice.amountPaid}</td>
-                      <td className="px-5 py-3.5 text-slate-600">{invoice.balanceDue}</td>
+                      <td className="px-5 py-3.5 text-slate-600">{formatMoney(invoice.total, invoice.currency)}</td>
+                      <td className="px-5 py-3.5 text-slate-600">{formatMoney(invoice.amountPaid, invoice.currency)}</td>
+                      <td className="px-5 py-3.5 text-slate-600">{formatMoney(invoice.balanceDue, invoice.currency)}</td>
                       <td className="px-5 py-3.5"><StatusPill status={invoice.status} /></td>
                       <td className="px-5 py-3.5">
                         <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => void sendInvoice(invoice.id)}>
@@ -218,7 +219,7 @@ export default function BillingPage() {
                     </div>
                     <StatusPill status={payment.status} />
                   </div>
-                  <p className="mt-3 text-sm text-slate-700">{payment.currency} {payment.amount}</p>
+                  <p className="mt-3 text-sm text-slate-700">{formatMoney(payment.amount, payment.currency)}</p>
                 </div>
               ))}
               {!loading && payments.length === 0 && <p className="text-sm text-slate-500">No payments found.</p>}
@@ -248,7 +249,7 @@ export default function BillingPage() {
                   ...current,
                   serviceId: event.target.value,
                   description: service?.name || current.description,
-                  unitPrice: service?.basePrice ? String(service.basePrice) : current.unitPrice,
+                  unitPrice: service?.basePrice ? String(toNumber(service.basePrice)) : current.unitPrice,
                 }));
               }}>
                 <option value="">No service</option>

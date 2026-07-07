@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CalendarDays, FileText, Plus, RefreshCw, Search } from "lucide-react";
 
 import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
@@ -13,6 +14,7 @@ import {
   Service,
   phase3Api,
 } from "@/lib/phase3-api";
+import { formatMoney } from "@/lib/formatters";
 
 const selectClass =
   "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40";
@@ -31,6 +33,7 @@ function formatDate(value?: string | null) {
 }
 
 export default function ContractsPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -253,8 +256,7 @@ export default function ContractsPage() {
                     key={contract.id}
                     className="cursor-pointer hover:bg-slate-50"
                     onClick={() => {
-                      setSelectedContractId(contract.id);
-                      setStatus(contract.status);
+                      router.push(`/dashboard/contracts/detail?id=${contract.id}`);
                     }}
                   >
                     <td className="px-5 py-3.5">
@@ -277,7 +279,9 @@ export default function ContractsPage() {
                       {contract._count?.services ?? 0}
                     </td>
                     <td className="px-5 py-3.5 text-slate-600">
-                      {contract.totalValue ? `$${contract.totalValue}` : "Not priced"}
+                      {contract.totalValue
+                        ? formatMoney(contract.totalValue, contract.currency)
+                        : "Not priced"}
                     </td>
                     <td className="px-5 py-3.5">
                       <StatusPill status={contract.status} />

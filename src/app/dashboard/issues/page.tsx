@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Plus, RefreshCw } from "lucide-react";
 
 import { StatusPill } from "@/components/dashboard/StatusPill";
@@ -17,6 +18,7 @@ const incidentTypes = ["CLEANING", "SECURITY", "PARKING", "STAFF", "CUSTOMER", "
 const severities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 
 export default function IssuesPage() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
@@ -172,14 +174,14 @@ export default function IssuesPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {complaints.map((complaint) => (
-                    <tr key={complaint.id} className="hover:bg-slate-50" onClick={() => setActionForm((current) => ({ ...current, complaintId: complaint.id }))}>
+                    <tr key={complaint.id} className="cursor-pointer hover:bg-slate-50" onClick={() => router.push(`/dashboard/issues/detail?id=${complaint.id}`)}>
                       <td className="px-5 py-3.5"><p className="font-medium text-slate-900">{complaint.title}</p><p className="line-clamp-1 text-xs text-slate-400">{complaint.description}</p></td>
                       <td className="px-5 py-3.5 text-slate-600">{complaint.customer?.name || "Not set"}</td>
                       <td className="px-5 py-3.5 text-slate-600">{complaint.priority.toLowerCase()}</td>
                       <td className="px-5 py-3.5 text-slate-600">{complaint._count?.correctiveActions ?? 0}</td>
                       <td className="px-5 py-3.5"><StatusPill status={complaint.status} /></td>
                       <td className="px-5 py-3.5">
-                        <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => void resolveComplaint(complaint.id)}>
+                        <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={(event) => { event.stopPropagation(); void resolveComplaint(complaint.id); }}>
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
                       </td>
@@ -195,7 +197,12 @@ export default function IssuesPage() {
             <CardHeader title="Incidents" />
             <div className="grid gap-3 p-5 md:grid-cols-2">
               {incidents.map((incident) => (
-                <div key={incident.id} className="rounded-lg border border-slate-200 p-4">
+                <button
+                  key={incident.id}
+                  type="button"
+                  className="rounded-lg border border-slate-200 p-4 text-left transition hover:border-slate-300 hover:bg-slate-50"
+                  onClick={() => router.push(`/dashboard/issues/incident-detail?id=${incident.id}`)}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-medium text-slate-900">{incident.title}</p>
@@ -204,7 +211,7 @@ export default function IssuesPage() {
                     <StatusPill status={incident.severity} />
                   </div>
                   <p className="mt-3 line-clamp-2 text-sm text-slate-600">{incident.description}</p>
-                </div>
+                </button>
               ))}
               {!loading && incidents.length === 0 && <p className="text-sm text-slate-500">No incidents found.</p>}
             </div>

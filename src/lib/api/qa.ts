@@ -75,6 +75,7 @@ export const qaApi = {
       method: "POST",
       body: jsonBody(input),
     }),
+  getInspection: (id: string) => workspaceRequest<Inspection>(`/inspections/${id}`),
   addResult: (id: string, input: Record<string, unknown>) =>
     workspaceRequest<InspectionResult>(`/inspections/${id}/results`, {
       method: "POST",

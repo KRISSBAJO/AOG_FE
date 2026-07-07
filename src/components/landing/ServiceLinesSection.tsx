@@ -40,7 +40,7 @@ const meta: Record<string, { icon: LucideIcon; tint: string }> = {
 
 export default function ServiceLinesSection() {
   return (
-    <section id="modules" className="bg-white py-28">
+    <section id="services" className="bg-white py-28">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <Reveal className="max-w-2xl">
           <span className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-600">
@@ -122,7 +122,7 @@ export default function ServiceLinesSection() {
 
         <Reveal className="mt-12" delay={0.1}>
           <Link
-            href="/contact"
+            href="/modules"
             className="group inline-flex items-center gap-2 rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-900 hover:text-slate-900"
           >
             See all modules in a live walkthrough

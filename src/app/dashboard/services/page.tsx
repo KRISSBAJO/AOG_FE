@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { DollarSign, Plus, RefreshCw, Search, Sparkles } from "lucide-react";
 
 import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
@@ -11,6 +12,7 @@ import {
   ServiceCategory,
   phase3Api,
 } from "@/lib/phase3-api";
+import { formatMoney } from "@/lib/formatters";
 
 const selectClass =
   "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40";
@@ -27,6 +29,7 @@ const serviceLines = [
 const serviceUnits = ["HOUR", "DAY", "SHIFT", "VISIT", "EVENT", "SQFT", "MONTH", "UNIT"];
 
 export default function ServicesPage() {
+  const router = useRouter();
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [areas, setAreas] = useState<ServiceArea[]>([]);
@@ -269,7 +272,7 @@ export default function ServicesPage() {
                   <tr
                     key={service.id}
                     className="cursor-pointer hover:bg-slate-50"
-                    onClick={() => setPriceForm((form) => ({ ...form, serviceId: service.id }))}
+                    onClick={() => router.push(`/dashboard/services/detail?id=${service.id}`)}
                   >
                     <td className="px-5 py-3.5">
                       <p className="font-medium text-slate-900">{service.name}</p>
@@ -285,7 +288,7 @@ export default function ServicesPage() {
                       {service.defaultUnit.toLowerCase()}
                     </td>
                     <td className="px-5 py-3.5 text-slate-600">
-                      {service.basePrice ? `$${service.basePrice}` : "Not set"}
+                      {service.basePrice ? formatMoney(service.basePrice) : "Not set"}
                     </td>
                     <td className="px-5 py-3.5 text-slate-600">
                       {service._count?.prices ?? 0}

@@ -9,10 +9,7 @@ import { getErrorMessage } from "@/lib/api";
 import { Invoice } from "@/lib/api/billing";
 import { ServiceRequest, WorkOrder } from "@/lib/api/operations";
 import { ReportResponse, reportsApi } from "@/lib/api/reports";
-
-function money(value: string | number | null | undefined) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(value ?? 0));
-}
+import { formatMoney } from "@/lib/formatters";
 
 export default function ReportsPage() {
   const [from, setFrom] = useState("");
@@ -103,7 +100,7 @@ export default function ReportsPage() {
             {(invoices?.summary.byStatus as Array<{ status: string; _count: { _all: number }; _sum: { balanceDue?: string | number | null } }> | undefined)?.map((item) => (
               <div key={item.status} className="flex items-center justify-between">
                 <StatusPill status={item.status} />
-                <span className="text-sm font-semibold text-slate-900">{money(item._sum.balanceDue)}</span>
+                <span className="text-sm font-semibold text-slate-900">{formatMoney(item._sum.balanceDue)}</span>
               </div>
             ))}
           </div>
@@ -129,9 +126,9 @@ export default function ReportsPage() {
                 <tr key={invoice.id} className="hover:bg-slate-50">
                   <td className="px-5 py-3.5 font-medium text-slate-900">{invoice.invoiceNumber}</td>
                   <td className="px-5 py-3.5 text-slate-600">{invoice.customer?.name || "Not set"}</td>
-                  <td className="px-5 py-3.5 text-slate-600">{money(invoice.total)}</td>
-                  <td className="px-5 py-3.5 text-slate-600">{money(invoice.amountPaid)}</td>
-                  <td className="px-5 py-3.5 text-slate-600">{money(invoice.balanceDue)}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{formatMoney(invoice.total, invoice.currency)}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{formatMoney(invoice.amountPaid, invoice.currency)}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{formatMoney(invoice.balanceDue, invoice.currency)}</td>
                   <td className="px-5 py-3.5"><StatusPill status={invoice.status} /></td>
                 </tr>
               ))}

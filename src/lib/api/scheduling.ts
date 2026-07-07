@@ -12,7 +12,9 @@ export type Shift = {
   startAt: string;
   endAt: string;
   requiredStaffCount: number;
+  facility?: { id: string; name: string } | null;
   department?: Pick<Department, "id" | "name"> | null;
+  workOrder?: { id: string; workOrderNumber: string; title: string } | null;
   assignments?: Array<{ id: string; employee?: Pick<Employee, "id" | "firstName" | "lastName"> }>;
 };
 
@@ -41,6 +43,7 @@ export const schedulingApi = {
   listShifts: (query?: Query) => workspaceRequest<ListResponse<Shift>>(withQuery("/shifts", query)),
   createShift: (input: Record<string, unknown>) =>
     workspaceRequest<Shift>("/shifts", { method: "POST", body: jsonBody(input) }),
+  getShift: (id: string) => workspaceRequest<Shift>(`/shifts/${id}`),
   updateShiftStatus: (id: string, status: string) =>
     workspaceRequest<Shift>(`/shifts/${id}/status`, {
       method: "PATCH",

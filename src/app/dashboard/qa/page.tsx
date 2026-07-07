@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, ClipboardCheck, Plus, RefreshCw } from "lucide-react";
 
 import { StatusPill } from "@/components/dashboard/StatusPill";
@@ -17,6 +18,7 @@ const serviceLines = ["CLEANING", "SECURITY", "PARKING", "EVENT_SETUP", "FACILIT
 const resultValues = ["PASS", "FAIL", "NA"];
 
 export default function QaPage() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<InspectionTemplate[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -185,8 +187,8 @@ export default function QaPage() {
                 {inspections.map((inspection) => (
                   <tr
                     key={inspection.id}
-                    className="hover:bg-slate-50"
-                    onClick={() => setResultForm((current) => ({ ...current, inspectionId: inspection.id }))}
+                    className="cursor-pointer hover:bg-slate-50"
+                    onClick={() => router.push(`/dashboard/qa/detail?id=${inspection.id}`)}
                   >
                     <td className="px-5 py-3.5">
                       <p className="font-medium text-slate-900">{inspection.template?.name || "Ad hoc inspection"}</p>
@@ -198,10 +200,10 @@ export default function QaPage() {
                     <td className="px-5 py-3.5"><StatusPill status={inspection.status} /></td>
                     <td className="px-5 py-3.5">
                       <div className="flex gap-2">
-                        <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => void completeInspection(inspection.id, true)}>
+                        <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={(event) => { event.stopPropagation(); void completeInspection(inspection.id, true); }}>
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
-                        <Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void completeInspection(inspection.id, false)}>
+                        <Button type="button" size="sm" variant="outline" disabled={saving} onClick={(event) => { event.stopPropagation(); void completeInspection(inspection.id, false); }}>
                           Fail
                         </Button>
                       </div>
