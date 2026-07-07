@@ -109,7 +109,7 @@ export default function ContactForm() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45 }}
-        className="rounded-2xl border border-emerald-200 bg-white p-8 shadow-sm"
+        className="rounded-xl border border-emerald-200 bg-white p-6 shadow-sm sm:p-8"
       >
         <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
           <CheckCircle2 className="h-6 w-6" />
@@ -155,18 +155,18 @@ export default function ContactForm() {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.08)] sm:p-6">
       <div className="mb-6 flex items-start gap-3">
-        <span className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+        <span className="flex h-11 w-11 flex-none items-center justify-center rounded-lg bg-sky-50 text-sky-600">
           <ClipboardList className="h-5 w-5" />
         </span>
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-            Request a service
+            Service request details
           </h2>
           <p className="mt-1 text-sm leading-6 text-slate-500">
-            Submit the request and we will generate an order number for public
-            status tracking.
+            Share requester, site, and timing details. We will issue an order
+            number after submission.
           </p>
         </div>
       </div>
@@ -177,8 +177,8 @@ export default function ContactForm() {
         </Alert>
       )}
 
-      <form onSubmit={onSubmit} className="space-y-5" noValidate>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             name="firstName"
             label="First name"
@@ -222,7 +222,7 @@ export default function ContactForm() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Select
             name="serviceLine"
             label="Service line"
@@ -237,7 +237,7 @@ export default function ContactForm() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             name="requestedStartAt"
             type="datetime-local"
@@ -250,7 +250,7 @@ export default function ContactForm() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             name="addressLine1"
             label="Address"
