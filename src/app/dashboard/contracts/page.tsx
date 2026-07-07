@@ -5,11 +5,15 @@ import { useRouter } from "next/navigation";
 import {
   Building2,
   CalendarDays,
+  Check,
+  ChevronDown,
+  Edit3,
   FileText,
   Plus,
   RefreshCw,
   Search,
   SlidersHorizontal,
+  Trash2,
   Wrench,
 } from "lucide-react";
 
@@ -90,8 +94,13 @@ export default function ContractsPage() {
   const [statusSaving, setStatusSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [contractSearch, setContractSearch] = useState("");
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [contractMode, setContractMode] = useState<"create" | "edit">("create");
+  const [editingContractId, setEditingContractId] = useState<string | null>(null);
+  const [contractPickerOpen, setContractPickerOpen] = useState(false);
+  const [contractDeletingId, setContractDeletingId] = useState<string | null>(null);
   const [facilityOpen, setFacilityOpen] = useState(false);
   const [serviceOpen, setServiceOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -108,9 +117,14 @@ export default function ContractsPage() {
   });
   const [status, setStatus] = useState("ACTIVE");
 
+  const activeContracts = useMemo(
+    () => contracts.filter((contract) => contract.status !== "TERMINATED"),
+    [contracts],
+  );
+
   const selectedContract = useMemo(
-    () => contracts.find((contract) => contract.id === selectedContractId),
-    [contracts, selectedContractId],
+    () => activeContracts.find((contract) => contract.id === selectedContractId),
+    [activeContracts, selectedContractId],
   );
 
   const matchingFacilities = useMemo(() => {
@@ -173,29 +187,110 @@ export default function ContractsPage() {
     if (selectedContract) setStatus(selectedContract.status);
   }, [selectedContract]);
 
-  async function createContract(event: FormEvent<HTMLFormElement>) {
+  function openCreateContractModal() {
+    setError(null);
+    setContractMode("create");
+    setEditingContractId(null);
+    setContractForm((form) => ({
+      ...emptyContractForm,
+      customerId: form.customerId || customers[0]?.id || "",
+      startDate: todayIso(),
+    }));
+    setCreateOpen(true);
+  }
+
+  function openEditContractModal(contract: Contract) {
+    setError(null);
+    setContractMode("edit");
+    setEditingContractId(contract.id);
+    setContractForm({
+      customerId: contract.customerId,
+      title: contract.title,
+      startDate: contract.startDate?.slice(0, 10) || todayIso(),
+      endDate: contract.endDate?.slice(0, 10) || "",
+      billingFrequency: contract.billingFrequency,
+    });
+    setCreateOpen(true);
+  }
+
+  function closeContractModal() {
+    setCreateOpen(false);
+    setEditingContractId(null);
+    setContractForm((form) => ({
+      ...emptyContractForm,
+      customerId: form.customerId,
+      startDate: todayIso(),
+    }));
+  }
+
+  async function saveContract(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setError(null);
 
     try {
-      const created = await phase3Api.createContract({
+      const payload = {
         ...contractForm,
         endDate: contractForm.endDate || undefined,
-      });
+      };
+      const saved =
+        contractMode === "edit" && editingContractId
+          ? await phase3Api.updateContract(editingContractId, payload)
+          : await phase3Api.createContract(payload);
+
       setContractForm((form) => ({
         ...emptyContractForm,
         customerId: form.customerId,
         startDate: todayIso(),
       }));
-      setSelectedContractId(created.id);
+      if (contractMode === "create" || selectedContractId === saved.id) {
+        setSelectedContractId(saved.id);
+      }
       setCreateOpen(false);
-      toast.success(`${created.title} was created.`, "Contract created");
+      setEditingContractId(null);
+      toast.success(
+        contractMode === "edit"
+          ? `${saved.title} was updated.`
+          : `${saved.title} was created and selected.`,
+        contractMode === "edit" ? "Contract updated" : "Contract created",
+      );
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function terminateContract(contract: Contract) {
+    const facilityCount = contract._count?.facilities ?? 0;
+    const serviceCount = contract._count?.services ?? 0;
+    const confirmed = window.confirm(
+      facilityCount || serviceCount
+        ? `Terminate ${contract.contractNumber}? It has ${facilityCount} facilities and ${serviceCount} services.`
+        : `Terminate ${contract.contractNumber}?`,
+    );
+
+    if (!confirmed) return;
+
+    setContractDeletingId(contract.id);
+    setError(null);
+
+    try {
+      await phase3Api.terminateContract(contract.id);
+      if (selectedContractId === contract.id) {
+        const fallback = activeContracts.find((item) => item.id !== contract.id);
+        setSelectedContractId(fallback?.id ?? "");
+      }
+      if (editingContractId === contract.id) {
+        closeContractModal();
+      }
+      toast.success(`${contract.contractNumber} was terminated.`, "Contract terminated");
+      await loadData(search);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setContractDeletingId(null);
     }
   }
 
@@ -262,7 +357,7 @@ export default function ContractsPage() {
     }
   }
 
-  const hasContracts = contracts.length > 0;
+  const hasContracts = activeContracts.length > 0;
 
   return (
     <div className="space-y-6">
@@ -289,19 +384,19 @@ export default function ContractsPage() {
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </form>
-            <Button variant="outline" onClick={() => setFacilityOpen(true)} disabled={!hasContracts}>
+            <Button variant="outline" onClick={() => setFacilityOpen(true)}>
               <Building2 className="h-4 w-4" />
               Attach facility
             </Button>
-            <Button variant="outline" onClick={() => setServiceOpen(true)} disabled={!hasContracts}>
+            <Button variant="outline" onClick={() => setServiceOpen(true)} disabled={!services.length}>
               <Wrench className="h-4 w-4" />
               Add service
             </Button>
-            <Button variant="outline" onClick={() => setStatusOpen(true)} disabled={!hasContracts}>
+            <Button variant="outline" onClick={() => setStatusOpen(true)}>
               <SlidersHorizontal className="h-4 w-4" />
               Status
             </Button>
-            <Button onClick={() => setCreateOpen(true)} disabled={!customers.length}>
+            <Button onClick={openCreateContractModal} disabled={!customers.length}>
               <Plus className="h-4 w-4" />
               New contract
             </Button>
@@ -380,7 +475,7 @@ export default function ContractsPage() {
                         : "Add a customer first, then create their contract."}
                     </p>
                     {customers.length > 0 && (
-                      <Button className="mt-4" onClick={() => setCreateOpen(true)}>
+                      <Button className="mt-4" onClick={openCreateContractModal}>
                         <Plus className="h-4 w-4" />
                         New contract
                       </Button>
@@ -396,12 +491,16 @@ export default function ContractsPage() {
       {/* Create contract */}
       <Drawer
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title="New contract"
-        description="Set the customer, term, and billing cadence."
+        onClose={closeContractModal}
+        title={contractMode === "edit" ? "Edit contract" : "New contract"}
+        description={
+          contractMode === "edit"
+            ? "Update the customer, term, and billing cadence."
+            : "Set the customer, term, and billing cadence."
+        }
         icon={FileText}
       >
-        <form onSubmit={createContract} className="flex h-full flex-col">
+        <form onSubmit={saveContract} className="flex h-full flex-col">
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
             {error && <Alert tone="error">{error}</Alert>}
             <DrawerSection title="Contract">
@@ -462,12 +561,27 @@ export default function ContractsPage() {
             </DrawerSection>
           </div>
           <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
-            <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
+            {contractMode === "edit" && editingContractId && (
+              <Button
+                type="button"
+                variant="ghost"
+                loading={editingContractId === contractDeletingId}
+                onClick={() => {
+                  const contract = contracts.find((item) => item.id === editingContractId);
+                  if (contract) void terminateContract(contract);
+                }}
+                className="mr-auto text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+                Terminate
+              </Button>
+            )}
+            <Button type="button" variant="ghost" onClick={closeContractModal}>
               Cancel
             </Button>
             <Button type="submit" loading={saving} disabled={!contractForm.customerId}>
               <Plus className="h-4 w-4" />
-              Save contract
+              {contractMode === "edit" ? "Save changes" : "Save contract"}
             </Button>
           </div>
         </form>
@@ -484,12 +598,20 @@ export default function ContractsPage() {
         <form onSubmit={attachFacility} className="flex h-full flex-col">
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
             {error && <Alert tone="error">{error}</Alert>}
-            <Select
-              label="Contract"
-              options={contractOptions}
+            <ContractPicker
+              contracts={activeContracts}
               value={selectedContractId}
-              onChange={(event) => setSelectedContractId(event.target.value)}
-              disabled={!hasContracts}
+              selectedContract={selectedContract}
+              search={contractSearch}
+              open={contractPickerOpen}
+              deletingContractId={contractDeletingId}
+              canCreate={customers.length > 0}
+              onSearchChange={setContractSearch}
+              onOpenChange={setContractPickerOpen}
+              onSelect={setSelectedContractId}
+              onCreate={openCreateContractModal}
+              onEdit={openEditContractModal}
+              onDelete={(contract) => void terminateContract(contract)}
             />
             <Select
               label="Facility"
@@ -536,12 +658,20 @@ export default function ContractsPage() {
         <form onSubmit={addContractService} className="flex h-full flex-col">
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
             {error && <Alert tone="error">{error}</Alert>}
-            <Select
-              label="Contract"
-              options={contractOptions}
+            <ContractPicker
+              contracts={activeContracts}
               value={selectedContractId}
-              onChange={(event) => setSelectedContractId(event.target.value)}
-              disabled={!hasContracts}
+              selectedContract={selectedContract}
+              search={contractSearch}
+              open={contractPickerOpen}
+              deletingContractId={contractDeletingId}
+              canCreate={customers.length > 0}
+              onSearchChange={setContractSearch}
+              onOpenChange={setContractPickerOpen}
+              onSelect={setSelectedContractId}
+              onCreate={openCreateContractModal}
+              onEdit={openEditContractModal}
+              onDelete={(contract) => void terminateContract(contract)}
             />
             <Select
               label="Service"
@@ -616,12 +746,20 @@ export default function ContractsPage() {
         <form onSubmit={updateStatus} className="flex h-full flex-col">
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
             {error && <Alert tone="error">{error}</Alert>}
-            <Select
-              label="Contract"
-              options={contractOptions}
+            <ContractPicker
+              contracts={activeContracts}
               value={selectedContractId}
-              onChange={(event) => setSelectedContractId(event.target.value)}
-              disabled={!hasContracts}
+              selectedContract={selectedContract}
+              search={contractSearch}
+              open={contractPickerOpen}
+              deletingContractId={contractDeletingId}
+              canCreate={customers.length > 0}
+              onSearchChange={setContractSearch}
+              onOpenChange={setContractPickerOpen}
+              onSelect={setSelectedContractId}
+              onCreate={openCreateContractModal}
+              onEdit={openEditContractModal}
+              onDelete={(contract) => void terminateContract(contract)}
             />
             <Select
               label="Status"
@@ -645,6 +783,172 @@ export default function ContractsPage() {
           </div>
         </form>
       </Drawer>
+    </div>
+  );
+}
+
+function ContractPicker({
+  contracts,
+  value,
+  selectedContract,
+  search,
+  open,
+  deletingContractId,
+  canCreate,
+  onSearchChange,
+  onOpenChange,
+  onSelect,
+  onCreate,
+  onEdit,
+  onDelete,
+}: {
+  contracts: Contract[];
+  value: string;
+  selectedContract?: Contract;
+  search: string;
+  open: boolean;
+  deletingContractId?: string | null;
+  canCreate: boolean;
+  onSearchChange: (value: string) => void;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (contractId: string) => void;
+  onCreate: () => void;
+  onEdit: (contract: Contract) => void;
+  onDelete: (contract: Contract) => void;
+}) {
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredContracts = contracts.filter((contract) => {
+    if (!normalizedSearch) return true;
+    return [
+      contract.contractNumber,
+      contract.title,
+      contract.customer?.name,
+      contract.billingFrequency,
+      contract.status,
+    ]
+      .filter(Boolean)
+      .some((field) => String(field).toLowerCase().includes(normalizedSearch));
+  });
+
+  return (
+    <div className="relative">
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <label className="text-sm font-medium text-slate-700">Contract</label>
+        <button
+          type="button"
+          onClick={onCreate}
+          disabled={!canCreate}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800 disabled:pointer-events-none disabled:text-slate-300"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-left text-sm text-slate-900 transition-colors hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+      >
+        <span className="min-w-0">
+          <span className="block truncate font-medium">
+            {selectedContract
+              ? `${selectedContract.contractNumber} - ${selectedContract.title}`
+              : "Select contract"}
+          </span>
+          <span className="block truncate text-xs text-slate-400">
+            {selectedContract
+              ? selectedContract.customer?.name ||
+                enumLabel(selectedContract.billingFrequency)
+              : "Search, add, edit, or terminate contracts"}
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+      </button>
+
+      {open && (
+        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/12">
+          <div className="border-b border-slate-100 p-3">
+            <Input
+              value={search}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="Search contracts"
+              icon={<Search className="h-4 w-4" />}
+              autoFocus
+            />
+          </div>
+
+          <div className="max-h-72 overflow-y-auto p-2">
+            {filteredContracts.map((contract) => {
+              const active = value === contract.id;
+              return (
+                <div
+                  key={contract.id}
+                  className="group flex items-center gap-2 rounded-lg px-3 py-2.5 hover:bg-slate-50"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelect(contract.id);
+                      onOpenChange(false);
+                    }}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-slate-900">
+                        {contract.contractNumber} - {contract.title}
+                      </span>
+                      {active && <Check className="h-4 w-4 shrink-0 text-emerald-500" />}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-slate-400">
+                      {contract.customer?.name || "No customer"} · {enumLabel(contract.status)}
+                      {contract._count?.services
+                        ? ` · ${contract._count.services} services`
+                        : ""}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onEdit(contract)}
+                    className="rounded-md p-2 text-slate-400 hover:bg-white hover:text-slate-700"
+                    aria-label={`Edit ${contract.contractNumber}`}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(contract)}
+                    disabled={deletingContractId === contract.id}
+                    className="rounded-md p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    aria-label={`Terminate ${contract.contractNumber}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
+
+            {!filteredContracts.length && (
+              <div className="px-3 py-8 text-center">
+                <p className="text-sm font-medium text-slate-900">No contracts found</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Add a contract before linking facilities or services.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="mt-3"
+                  onClick={onCreate}
+                  disabled={!canCreate}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add contract
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
