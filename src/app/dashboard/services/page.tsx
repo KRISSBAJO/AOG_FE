@@ -1,11 +1,21 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DollarSign, Plus, RefreshCw, Search, Sparkles } from "lucide-react";
+import {
+  DollarSign,
+  Layers,
+  MapPinned,
+  Plus,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Tag,
+} from "lucide-react";
 
-import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
+import { Alert, Button, Card, CardHeader, Input, Select } from "@/components/ui";
 import { PageHeader } from "@/components/dashboard/PageHeader";
+import { Drawer, DrawerSection } from "@/components/dashboard/Drawer";
 import { getErrorMessage } from "@/lib/api";
 import {
   Service,
@@ -14,20 +24,48 @@ import {
   phase3Api,
 } from "@/lib/phase3-api";
 import { formatMoney } from "@/lib/formatters";
+import { toast } from "@/lib/toast";
 
-const selectClass =
-  "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40";
+const enumLabel = (value: string) => value.replaceAll("_", " ").toLowerCase();
 
-const serviceLines = [
+const serviceLineOptions = [
   "CLEANING",
   "SECURITY",
   "PARKING",
   "EVENT_SETUP",
   "FACILITY_SUPPORT",
   "OTHER",
-];
+].map((value) => ({ value, label: enumLabel(value) }));
 
-const serviceUnits = ["HOUR", "DAY", "SHIFT", "VISIT", "EVENT", "SQFT", "MONTH", "UNIT"];
+const unitOptions = [
+  "HOUR",
+  "DAY",
+  "SHIFT",
+  "VISIT",
+  "EVENT",
+  "SQFT",
+  "MONTH",
+  "UNIT",
+].map((value) => ({ value, label: enumLabel(value) }));
+
+const emptyCategoryForm = { name: "", serviceLine: "CLEANING", description: "" };
+const emptyServiceForm = {
+  categoryId: "",
+  code: "",
+  name: "",
+  serviceLine: "CLEANING",
+  defaultUnit: "VISIT",
+  basePrice: "",
+  estimatedDurationMinutes: "",
+};
+const emptyPriceForm = {
+  serviceId: "",
+  name: "Standard rate",
+  amount: "",
+  unit: "VISIT",
+  isDefault: true,
+};
+const emptyAreaForm = { name: "", city: "", state: "", postalCode: "", country: "US" };
 
 export default function ServicesPage() {
   const router = useRouter();
@@ -41,34 +79,17 @@ export default function ServicesPage() {
   const [areaSaving, setAreaSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [categoryForm, setCategoryForm] = useState({
-    name: "",
-    serviceLine: "CLEANING",
-    description: "",
-  });
-  const [serviceForm, setServiceForm] = useState({
-    categoryId: "",
-    code: "",
-    name: "",
-    serviceLine: "CLEANING",
-    defaultUnit: "VISIT",
-    basePrice: "",
-    estimatedDurationMinutes: "",
-  });
-  const [priceForm, setPriceForm] = useState({
-    serviceId: "",
-    name: "Standard rate",
-    amount: "",
-    unit: "VISIT",
-    isDefault: true,
-  });
-  const [areaForm, setAreaForm] = useState({
-    name: "",
-    city: "",
-    state: "",
-    postalCode: "",
-    country: "US",
-  });
+
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [serviceOpen, setServiceOpen] = useState(false);
+  const [priceOpen, setPriceOpen] = useState(false);
+  const [areaOpen, setAreaOpen] = useState(false);
+  const anyDrawerOpen = categoryOpen || serviceOpen || priceOpen || areaOpen;
+
+  const [categoryForm, setCategoryForm] = useState(emptyCategoryForm);
+  const [serviceForm, setServiceForm] = useState(emptyServiceForm);
+  const [priceForm, setPriceForm] = useState(emptyPriceForm);
+  const [areaForm, setAreaForm] = useState(emptyAreaForm);
 
   const activeServices = useMemo(
     () => services.filter((service) => service.isActive),
@@ -120,12 +141,14 @@ export default function ServicesPage() {
         ...categoryForm,
         description: categoryForm.description || undefined,
       });
-      setCategoryForm({ name: "", serviceLine: "CLEANING", description: "" });
+      setCategoryForm(emptyCategoryForm);
       setServiceForm((form) => ({
         ...form,
         categoryId: category.id,
         serviceLine: category.serviceLine,
       }));
+      setCategoryOpen(false);
+      toast.success(`${category.name} was added.`, "Category created");
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -150,15 +173,13 @@ export default function ServicesPage() {
           : undefined,
       });
       setServiceForm((form) => ({
+        ...emptyServiceForm,
         categoryId: form.categoryId,
-        code: "",
-        name: "",
         serviceLine: form.serviceLine,
-        defaultUnit: "VISIT",
-        basePrice: "",
-        estimatedDurationMinutes: "",
       }));
       setPriceForm((form) => ({ ...form, serviceId: service.id }));
+      setServiceOpen(false);
+      toast.success(`${service.name} was added.`, "Service created");
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -182,6 +203,8 @@ export default function ServicesPage() {
         isDefault: priceForm.isDefault,
       });
       setPriceForm((form) => ({ ...form, name: "Standard rate", amount: "" }));
+      setPriceOpen(false);
+      toast.success("Price rule saved.", "Pricing updated");
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -203,7 +226,9 @@ export default function ServicesPage() {
         postalCode: areaForm.postalCode || undefined,
         country: areaForm.country || undefined,
       });
-      setAreaForm({ name: "", city: "", state: "", postalCode: "", country: "US" });
+      setAreaForm(emptyAreaForm);
+      setAreaOpen(false);
+      toast.success("Service area saved.", "Coverage updated");
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -228,135 +253,181 @@ export default function ServicesPage() {
         description={`${total} service definitions and ${areas.length} active service areas.`}
         eyebrow="Customer operations"
         actions={
-          <form
-            className="flex w-full flex-col gap-2 sm:w-[460px] sm:flex-row"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void loadData(search);
-            }}
-          >
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search services"
-              icon={<Search className="h-4 w-4" />}
-            />
-            <Button type="submit" variant="outline">
-              <RefreshCw className="h-4 w-4" />
-              Refresh
+          <>
+            <form
+              className="flex w-full gap-2 sm:w-64"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void loadData(search);
+              }}
+            >
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search services"
+                icon={<Search className="h-4 w-4" />}
+              />
+              <Button type="submit" variant="outline" aria-label="Refresh">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </form>
+            <Button variant="outline" onClick={() => setCategoryOpen(true)}>
+              <Layers className="h-4 w-4" />
+              Category
             </Button>
-          </form>
+            <Button
+              variant="outline"
+              onClick={() => setPriceOpen(true)}
+              disabled={!activeServices.length}
+            >
+              <Tag className="h-4 w-4" />
+              Price rule
+            </Button>
+            <Button variant="outline" onClick={() => setAreaOpen(true)}>
+              <MapPinned className="h-4 w-4" />
+              Area
+            </Button>
+            <Button onClick={() => setServiceOpen(true)}>
+              <Plus className="h-4 w-4" />
+              New service
+            </Button>
+          </>
         }
       />
 
-      {error && <Alert tone="error">{error}</Alert>}
+      {error && !anyDrawerOpen && <Alert tone="error">{error}</Alert>}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_430px]">
-        <Card>
-          <CardHeader title="Service catalog" />
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-                  <th className="px-5 py-3 font-medium">Service</th>
-                  <th className="px-5 py-3 font-medium">Category</th>
-                  <th className="px-5 py-3 font-medium">Line</th>
-                  <th className="px-5 py-3 font-medium">Unit</th>
-                  <th className="px-5 py-3 font-medium">Base price</th>
-                  <th className="px-5 py-3 font-medium">Price rules</th>
-                  <th className="px-5 py-3 font-medium">Active</th>
+      <Card>
+        <CardHeader title="Service catalog" />
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                <th className="px-5 py-3 font-medium">Service</th>
+                <th className="px-5 py-3 font-medium">Category</th>
+                <th className="px-5 py-3 font-medium">Line</th>
+                <th className="px-5 py-3 font-medium">Unit</th>
+                <th className="px-5 py-3 font-medium">Base price</th>
+                <th className="px-5 py-3 font-medium">Price rules</th>
+                <th className="px-5 py-3 font-medium">Active</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {services.map((service) => (
+                <tr
+                  key={service.id}
+                  className="cursor-pointer hover:bg-slate-50"
+                  onClick={() => router.push(`/dashboard/services/detail?id=${service.id}`)}
+                >
+                  <td className="px-5 py-3.5">
+                    <p className="font-medium text-slate-900">{service.name}</p>
+                    <p className="text-xs text-slate-400">{service.code || service.id}</p>
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {service.category?.name || "Uncategorized"}
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {enumLabel(service.serviceLine)}
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {service.defaultUnit.toLowerCase()}
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {service.basePrice ? formatMoney(service.basePrice) : "Not set"}
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {service._count?.prices ?? 0}
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {service.isActive ? "Yes" : "No"}
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {services.map((service) => (
-                  <tr
-                    key={service.id}
-                    className="cursor-pointer hover:bg-slate-50"
-                    onClick={() => router.push(`/dashboard/services/detail?id=${service.id}`)}
-                  >
-                    <td className="px-5 py-3.5">
-                      <p className="font-medium text-slate-900">{service.name}</p>
-                      <p className="text-xs text-slate-400">{service.code || service.id}</p>
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {service.category?.name || "Uncategorized"}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {service.serviceLine.replaceAll("_", " ").toLowerCase()}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {service.defaultUnit.toLowerCase()}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {service.basePrice ? formatMoney(service.basePrice) : "Not set"}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {service._count?.prices ?? 0}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {service.isActive ? "Yes" : "No"}
-                    </td>
-                  </tr>
-                ))}
-                {!loading && services.length === 0 && (
-                  <tr>
-                    <td className="px-5 py-8 text-center text-slate-500" colSpan={7}>
-                      No services found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+              ))}
+              {loading && (
+                <tr>
+                  <td className="px-5 py-8 text-center text-slate-400" colSpan={7}>
+                    Loading services…
+                  </td>
+                </tr>
+              )}
+              {!loading && services.length === 0 && (
+                <tr>
+                  <td className="px-5 py-12 text-center" colSpan={7}>
+                    <p className="text-sm font-medium text-slate-900">No services yet</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Define your first service to price and schedule work.
+                    </p>
+                    <Button className="mt-4" onClick={() => setServiceOpen(true)}>
+                      <Plus className="h-4 w-4" />
+                      New service
+                    </Button>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* New category */}
+      <Drawer
+        open={categoryOpen}
+        onClose={() => setCategoryOpen(false)}
+        title="New category"
+        description="Group related services under a service line."
+        icon={Layers}
+      >
+        <form onSubmit={createCategory} className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
+            {error && <Alert tone="error">{error}</Alert>}
+            <Input
+              label="Name"
+              value={categoryForm.name}
+              onChange={(event) =>
+                setCategoryForm((form) => ({ ...form, name: event.target.value }))
+              }
+              placeholder="Daily janitorial"
+              required
+            />
+            <Select
+              label="Service line"
+              options={serviceLineOptions}
+              value={categoryForm.serviceLine}
+              onChange={(event) =>
+                setCategoryForm((form) => ({ ...form, serviceLine: event.target.value }))
+              }
+            />
           </div>
-        </Card>
+          <DrawerFooter onCancel={() => setCategoryOpen(false)} loading={saving}>
+            Save category
+          </DrawerFooter>
+        </form>
+      </Drawer>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader title="Create category" />
-            <form className="space-y-4 p-5" onSubmit={createCategory}>
-              <Input
-                label="Name"
-                value={categoryForm.name}
-                onChange={(event) =>
-                  setCategoryForm((form) => ({ ...form, name: event.target.value }))
-                }
-                required
-              />
-              <select
-                className={selectClass}
-                value={categoryForm.serviceLine}
-                onChange={(event) =>
-                  setCategoryForm((form) => ({ ...form, serviceLine: event.target.value }))
-                }
-              >
-                {serviceLines.map((line) => (
-                  <option key={line} value={line}>
-                    {line.replaceAll("_", " ").toLowerCase()}
-                  </option>
-                ))}
-              </select>
-              <Button type="submit" loading={saving} fullWidth>
-                <Plus className="h-4 w-4" />
-                Save category
-              </Button>
-            </form>
-          </Card>
-
-          <Card>
-            <CardHeader title="Create service" />
-            <form className="space-y-4 p-5" onSubmit={createService}>
-              <select
-                className={selectClass}
+      {/* New service */}
+      <Drawer
+        open={serviceOpen}
+        onClose={() => setServiceOpen(false)}
+        title="New service"
+        description="Define a service, its unit, and a base price."
+        icon={Sparkles}
+      >
+        <form onSubmit={createService} className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
+            {error && <Alert tone="error">{error}</Alert>}
+            <DrawerSection title="Definition">
+              <Select
+                label="Category"
+                options={[
+                  { value: "", label: "No category" },
+                  ...categories.map((category) => ({
+                    value: category.id,
+                    label: category.name,
+                  })),
+                ]}
                 value={serviceForm.categoryId}
                 onChange={(event) => updateServiceCategory(event.target.value)}
-              >
-                <option value="">No category</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+              />
               <Input
                 label="Name"
                 value={serviceForm.name}
@@ -364,6 +435,7 @@ export default function ServicesPage() {
                   setServiceForm((form) => ({ ...form, name: event.target.value }))
                 }
                 icon={<Sparkles className="h-4 w-4" />}
+                placeholder="Lobby deep clean"
                 required
               />
               <Input
@@ -372,34 +444,28 @@ export default function ServicesPage() {
                 onChange={(event) =>
                   setServiceForm((form) => ({ ...form, code: event.target.value }))
                 }
+                placeholder="Optional internal code"
               />
+            </DrawerSection>
+
+            <DrawerSection title="Pricing & unit">
               <div className="grid grid-cols-2 gap-3">
-                <select
-                  className={selectClass}
+                <Select
+                  label="Service line"
+                  options={serviceLineOptions}
                   value={serviceForm.serviceLine}
                   onChange={(event) =>
                     setServiceForm((form) => ({ ...form, serviceLine: event.target.value }))
                   }
-                >
-                  {serviceLines.map((line) => (
-                    <option key={line} value={line}>
-                      {line.replaceAll("_", " ").toLowerCase()}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className={selectClass}
+                />
+                <Select
+                  label="Default unit"
+                  options={unitOptions}
                   value={serviceForm.defaultUnit}
                   onChange={(event) =>
                     setServiceForm((form) => ({ ...form, defaultUnit: event.target.value }))
                   }
-                >
-                  {serviceUnits.map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit.toLowerCase()}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Input
@@ -414,7 +480,7 @@ export default function ServicesPage() {
                   icon={<DollarSign className="h-4 w-4" />}
                 />
                 <Input
-                  label="Minutes"
+                  label="Est. minutes"
                   type="number"
                   min="0"
                   value={serviceForm.estimatedDurationMinutes}
@@ -426,94 +492,149 @@ export default function ServicesPage() {
                   }
                 />
               </div>
-              <Button type="submit" loading={saving} fullWidth variant="secondary">
-                Save service
-              </Button>
-            </form>
-          </Card>
+            </DrawerSection>
+          </div>
+          <DrawerFooter onCancel={() => setServiceOpen(false)} loading={saving}>
+            Save service
+          </DrawerFooter>
+        </form>
+      </Drawer>
 
-          <Card>
-            <CardHeader title="Add price rule" />
-            <form className="space-y-4 p-5" onSubmit={createPrice}>
-              <select
-                className={selectClass}
-                value={priceForm.serviceId}
-                onChange={(event) =>
-                  setPriceForm((form) => ({ ...form, serviceId: event.target.value }))
-                }
-                disabled={!activeServices.length}
-              >
-                {activeServices.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
-              </select>
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  label="Name"
-                  value={priceForm.name}
-                  onChange={(event) =>
-                    setPriceForm((form) => ({ ...form, name: event.target.value }))
-                  }
-                  required
-                />
-                <Input
-                  label="Amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={priceForm.amount}
-                  onChange={(event) =>
-                    setPriceForm((form) => ({ ...form, amount: event.target.value }))
-                  }
-                  required
-                />
-              </div>
-              <Button
-                type="submit"
-                loading={priceSaving}
-                fullWidth
-                disabled={!priceForm.serviceId}
-                variant="outline"
-              >
-                Save price
-              </Button>
-            </form>
-          </Card>
-
-          <Card>
-            <CardHeader title="Add service area" />
-            <form className="space-y-4 p-5" onSubmit={createArea}>
+      {/* Add price rule */}
+      <Drawer
+        open={priceOpen}
+        onClose={() => setPriceOpen(false)}
+        title="Add price rule"
+        description="Attach a named rate to an existing service."
+        icon={Tag}
+      >
+        <form onSubmit={createPrice} className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
+            {error && <Alert tone="error">{error}</Alert>}
+            <Select
+              label="Service"
+              options={activeServices.map((service) => ({
+                value: service.id,
+                label: service.name,
+              }))}
+              value={priceForm.serviceId}
+              onChange={(event) =>
+                setPriceForm((form) => ({ ...form, serviceId: event.target.value }))
+              }
+              disabled={!activeServices.length}
+            />
+            <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Name"
-                value={areaForm.name}
-                onChange={(event) => setAreaForm((form) => ({ ...form, name: event.target.value }))}
+                label="Rate name"
+                value={priceForm.name}
+                onChange={(event) =>
+                  setPriceForm((form) => ({ ...form, name: event.target.value }))
+                }
                 required
               />
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  label="City"
-                  value={areaForm.city}
-                  onChange={(event) =>
-                    setAreaForm((form) => ({ ...form, city: event.target.value }))
-                  }
-                />
-                <Input
-                  label="State"
-                  value={areaForm.state}
-                  onChange={(event) =>
-                    setAreaForm((form) => ({ ...form, state: event.target.value }))
-                  }
-                />
-              </div>
-              <Button type="submit" loading={areaSaving} fullWidth variant="ghost">
-                Save area
-              </Button>
-            </form>
-          </Card>
-        </div>
-      </div>
+              <Input
+                label="Amount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={priceForm.amount}
+                onChange={(event) =>
+                  setPriceForm((form) => ({ ...form, amount: event.target.value }))
+                }
+                icon={<DollarSign className="h-4 w-4" />}
+                required
+              />
+            </div>
+            <Select
+              label="Unit"
+              options={unitOptions}
+              value={priceForm.unit}
+              onChange={(event) =>
+                setPriceForm((form) => ({ ...form, unit: event.target.value }))
+              }
+            />
+          </div>
+          <DrawerFooter
+            onCancel={() => setPriceOpen(false)}
+            loading={priceSaving}
+            disabled={!priceForm.serviceId}
+            variant="secondary"
+          >
+            Save price rule
+          </DrawerFooter>
+        </form>
+      </Drawer>
+
+      {/* New service area */}
+      <Drawer
+        open={areaOpen}
+        onClose={() => setAreaOpen(false)}
+        title="New service area"
+        description="Define a geography your teams cover."
+        icon={MapPinned}
+      >
+        <form onSubmit={createArea} className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
+            {error && <Alert tone="error">{error}</Alert>}
+            <Input
+              label="Name"
+              value={areaForm.name}
+              onChange={(event) => setAreaForm((form) => ({ ...form, name: event.target.value }))}
+              placeholder="Downtown metro"
+              required
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="City"
+                value={areaForm.city}
+                onChange={(event) =>
+                  setAreaForm((form) => ({ ...form, city: event.target.value }))
+                }
+              />
+              <Input
+                label="State"
+                value={areaForm.state}
+                onChange={(event) =>
+                  setAreaForm((form) => ({ ...form, state: event.target.value }))
+                }
+              />
+            </div>
+          </div>
+          <DrawerFooter
+            onCancel={() => setAreaOpen(false)}
+            loading={areaSaving}
+            variant="secondary"
+          >
+            Save area
+          </DrawerFooter>
+        </form>
+      </Drawer>
+    </div>
+  );
+}
+
+function DrawerFooter({
+  onCancel,
+  loading,
+  disabled,
+  variant = "primary",
+  children,
+}: {
+  onCancel: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+  variant?: "primary" | "secondary";
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
+      <Button type="button" variant="ghost" onClick={onCancel}>
+        Cancel
+      </Button>
+      <Button type="submit" loading={loading} disabled={disabled} variant={variant}>
+        <Plus className="h-4 w-4" />
+        {children}
+      </Button>
     </div>
   );
 }

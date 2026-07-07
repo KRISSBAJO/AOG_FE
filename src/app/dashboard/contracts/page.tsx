@@ -2,11 +2,21 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, FileText, Plus, RefreshCw, Search } from "lucide-react";
+import {
+  Building2,
+  CalendarDays,
+  FileText,
+  Plus,
+  RefreshCw,
+  Search,
+  SlidersHorizontal,
+  Wrench,
+} from "lucide-react";
 
-import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
+import { Alert, Button, Card, CardHeader, Input, Select } from "@/components/ui";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusPill } from "@/components/dashboard/StatusPill";
+import { Drawer, DrawerSection } from "@/components/dashboard/Drawer";
 import { getErrorMessage } from "@/lib/api";
 import {
   Contract,
@@ -16,13 +26,38 @@ import {
   phase3Api,
 } from "@/lib/phase3-api";
 import { formatMoney } from "@/lib/formatters";
+import { toast } from "@/lib/toast";
 
-const selectClass =
-  "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40";
+const enumLabel = (value: string) => value.replaceAll("_", " ").toLowerCase();
 
-const contractStatuses = ["DRAFT", "ACTIVE", "PAUSED", "EXPIRED", "TERMINATED", "RENEWAL_PENDING"];
-const billingFrequencies = ["ONE_TIME", "WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY", "ANNUAL", "CUSTOM"];
-const recurrenceFrequencies = ["NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY", "CUSTOM"];
+const statusOptions = [
+  "DRAFT",
+  "ACTIVE",
+  "PAUSED",
+  "EXPIRED",
+  "TERMINATED",
+  "RENEWAL_PENDING",
+].map((value) => ({ value, label: enumLabel(value) }));
+
+const billingOptions = [
+  "ONE_TIME",
+  "WEEKLY",
+  "BIWEEKLY",
+  "MONTHLY",
+  "QUARTERLY",
+  "ANNUAL",
+  "CUSTOM",
+].map((value) => ({ value, label: enumLabel(value) }));
+
+const recurrenceOptions = [
+  "NONE",
+  "DAILY",
+  "WEEKLY",
+  "BIWEEKLY",
+  "MONTHLY",
+  "QUARTERLY",
+  "CUSTOM",
+].map((value) => ({ value, label: enumLabel(value) }));
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -32,6 +67,14 @@ function formatDate(value?: string | null) {
   if (!value) return "Not set";
   return new Date(value).toLocaleDateString();
 }
+
+const emptyContractForm = {
+  customerId: "",
+  title: "",
+  startDate: todayIso(),
+  endDate: "",
+  billingFrequency: "MONTHLY",
+};
 
 export default function ContractsPage() {
   const router = useRouter();
@@ -47,14 +90,15 @@ export default function ContractsPage() {
   const [statusSaving, setStatusSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [facilityOpen, setFacilityOpen] = useState(false);
+  const [serviceOpen, setServiceOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const anyDrawerOpen = createOpen || facilityOpen || serviceOpen || statusOpen;
+
   const [selectedContractId, setSelectedContractId] = useState("");
-  const [contractForm, setContractForm] = useState({
-    customerId: "",
-    title: "",
-    startDate: todayIso(),
-    endDate: "",
-    billingFrequency: "MONTHLY",
-  });
+  const [contractForm, setContractForm] = useState(emptyContractForm);
   const [facilityId, setFacilityId] = useState("");
   const [contractServiceForm, setContractServiceForm] = useState({
     serviceId: "",
@@ -73,6 +117,11 @@ export default function ContractsPage() {
     if (!selectedContract) return facilities;
     return facilities.filter((facility) => facility.customerId === selectedContract.customerId);
   }, [facilities, selectedContract]);
+
+  const contractOptions = contracts.map((contract) => ({
+    value: contract.id,
+    label: `${contract.contractNumber} — ${contract.title}`,
+  }));
 
   async function loadData(nextSearch = search) {
     setLoading(true);
@@ -120,6 +169,10 @@ export default function ContractsPage() {
     }
   }, [facilityId, matchingFacilities]);
 
+  useEffect(() => {
+    if (selectedContract) setStatus(selectedContract.status);
+  }, [selectedContract]);
+
   async function createContract(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -131,13 +184,13 @@ export default function ContractsPage() {
         endDate: contractForm.endDate || undefined,
       });
       setContractForm((form) => ({
+        ...emptyContractForm,
         customerId: form.customerId,
-        title: "",
         startDate: todayIso(),
-        endDate: "",
-        billingFrequency: "MONTHLY",
       }));
       setSelectedContractId(created.id);
+      setCreateOpen(false);
+      toast.success(`${created.title} was created.`, "Contract created");
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -155,6 +208,8 @@ export default function ContractsPage() {
 
     try {
       await phase3Api.addContractFacility(selectedContractId, facilityId);
+      setFacilityOpen(false);
+      toast.success("Facility attached to contract.", "Contract updated");
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -178,6 +233,8 @@ export default function ContractsPage() {
         price: contractServiceForm.price ? Number(contractServiceForm.price) : undefined,
       });
       setContractServiceForm((form) => ({ ...form, quantity: "1", price: "" }));
+      setServiceOpen(false);
+      toast.success("Service added to contract.", "Contract updated");
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -195,6 +252,8 @@ export default function ContractsPage() {
 
     try {
       await phase3Api.updateContractStatus(selectedContractId, status);
+      setStatusOpen(false);
+      toast.success(`Status set to ${enumLabel(status)}.`, "Contract updated");
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -203,6 +262,8 @@ export default function ContractsPage() {
     }
   }
 
+  const hasContracts = contracts.length > 0;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -210,115 +271,153 @@ export default function ContractsPage() {
         description={`${total} contracts across customers, facilities, and recurring services.`}
         eyebrow="Customer operations"
         actions={
-          <form
-            className="flex w-full flex-col gap-2 sm:w-[460px] sm:flex-row"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void loadData(search);
-            }}
-          >
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search contracts"
-              icon={<Search className="h-4 w-4" />}
-            />
-            <Button type="submit" variant="outline">
-              <RefreshCw className="h-4 w-4" />
-              Refresh
+          <>
+            <form
+              className="flex w-full gap-2 sm:w-64"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void loadData(search);
+              }}
+            >
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search contracts"
+                icon={<Search className="h-4 w-4" />}
+              />
+              <Button type="submit" variant="outline" aria-label="Refresh">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </form>
+            <Button variant="outline" onClick={() => setFacilityOpen(true)} disabled={!hasContracts}>
+              <Building2 className="h-4 w-4" />
+              Attach facility
             </Button>
-          </form>
+            <Button variant="outline" onClick={() => setServiceOpen(true)} disabled={!hasContracts}>
+              <Wrench className="h-4 w-4" />
+              Add service
+            </Button>
+            <Button variant="outline" onClick={() => setStatusOpen(true)} disabled={!hasContracts}>
+              <SlidersHorizontal className="h-4 w-4" />
+              Status
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} disabled={!customers.length}>
+              <Plus className="h-4 w-4" />
+              New contract
+            </Button>
+          </>
         }
       />
 
-      {error && <Alert tone="error">{error}</Alert>}
+      {error && !anyDrawerOpen && <Alert tone="error">{error}</Alert>}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_430px]">
-        <Card>
-          <CardHeader title="Contract portfolio" />
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-                  <th className="px-5 py-3 font-medium">Contract</th>
-                  <th className="px-5 py-3 font-medium">Customer</th>
-                  <th className="px-5 py-3 font-medium">Term</th>
-                  <th className="px-5 py-3 font-medium">Billing</th>
-                  <th className="px-5 py-3 font-medium">Facilities</th>
-                  <th className="px-5 py-3 font-medium">Services</th>
-                  <th className="px-5 py-3 font-medium">Value</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
+      <Card>
+        <CardHeader title="Contract portfolio" />
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                <th className="px-5 py-3 font-medium">Contract</th>
+                <th className="px-5 py-3 font-medium">Customer</th>
+                <th className="px-5 py-3 font-medium">Term</th>
+                <th className="px-5 py-3 font-medium">Billing</th>
+                <th className="px-5 py-3 font-medium">Facilities</th>
+                <th className="px-5 py-3 font-medium">Services</th>
+                <th className="px-5 py-3 font-medium">Value</th>
+                <th className="px-5 py-3 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {contracts.map((contract) => (
+                <tr
+                  key={contract.id}
+                  className="cursor-pointer hover:bg-slate-50"
+                  onClick={() => router.push(`/dashboard/contracts/detail?id=${contract.id}`)}
+                >
+                  <td className="px-5 py-3.5">
+                    <p className="font-medium text-slate-900">{contract.title}</p>
+                    <p className="text-xs text-slate-400">{contract.contractNumber}</p>
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {contract.customer?.name || "Not set"}
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {formatDate(contract.startDate)} - {formatDate(contract.endDate)}
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {enumLabel(contract.billingFrequency)}
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {contract._count?.facilities ?? 0}
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {contract._count?.services ?? 0}
+                  </td>
+                  <td className="px-5 py-3.5 text-slate-600">
+                    {contract.totalValue
+                      ? formatMoney(contract.totalValue, contract.currency)
+                      : "Not priced"}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <StatusPill status={contract.status} />
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {contracts.map((contract) => (
-                  <tr
-                    key={contract.id}
-                    className="cursor-pointer hover:bg-slate-50"
-                    onClick={() => {
-                      router.push(`/dashboard/contracts/detail?id=${contract.id}`);
-                    }}
-                  >
-                    <td className="px-5 py-3.5">
-                      <p className="font-medium text-slate-900">{contract.title}</p>
-                      <p className="text-xs text-slate-400">{contract.contractNumber}</p>
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {contract.customer?.name || "Not set"}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {formatDate(contract.startDate)} - {formatDate(contract.endDate)}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {contract.billingFrequency.replaceAll("_", " ").toLowerCase()}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {contract._count?.facilities ?? 0}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {contract._count?.services ?? 0}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">
-                      {contract.totalValue
-                        ? formatMoney(contract.totalValue, contract.currency)
-                        : "Not priced"}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <StatusPill status={contract.status} />
-                    </td>
-                  </tr>
-                ))}
-                {!loading && contracts.length === 0 && (
-                  <tr>
-                    <td className="px-5 py-8 text-center text-slate-500" colSpan={8}>
-                      No contracts found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+              ))}
+              {loading && (
+                <tr>
+                  <td className="px-5 py-8 text-center text-slate-400" colSpan={8}>
+                    Loading contracts…
+                  </td>
+                </tr>
+              )}
+              {!loading && contracts.length === 0 && (
+                <tr>
+                  <td className="px-5 py-12 text-center" colSpan={8}>
+                    <p className="text-sm font-medium text-slate-900">No contracts yet</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {customers.length
+                        ? "Create a contract to bundle facilities and recurring services."
+                        : "Add a customer first, then create their contract."}
+                    </p>
+                    {customers.length > 0 && (
+                      <Button className="mt-4" onClick={() => setCreateOpen(true)}>
+                        <Plus className="h-4 w-4" />
+                        New contract
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader title="Create contract" />
-            <form className="space-y-4 p-5" onSubmit={createContract}>
-              <select
-                className={selectClass}
+      {/* Create contract */}
+      <Drawer
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="New contract"
+        description="Set the customer, term, and billing cadence."
+        icon={FileText}
+      >
+        <form onSubmit={createContract} className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
+            {error && <Alert tone="error">{error}</Alert>}
+            <DrawerSection title="Contract">
+              <Select
+                label="Customer"
+                options={customers.map((customer) => ({
+                  value: customer.id,
+                  label: customer.name,
+                }))}
                 value={contractForm.customerId}
                 onChange={(event) =>
                   setContractForm((form) => ({ ...form, customerId: event.target.value }))
                 }
                 disabled={!customers.length}
                 required
-              >
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </option>
-                ))}
-              </select>
+              />
               <Input
                 label="Title"
                 value={contractForm.title}
@@ -326,11 +425,15 @@ export default function ContractsPage() {
                   setContractForm((form) => ({ ...form, title: event.target.value }))
                 }
                 icon={<FileText className="h-4 w-4" />}
+                placeholder="Nightly cleaning — Northgate"
                 required
               />
+            </DrawerSection>
+
+            <DrawerSection title="Term & billing">
               <div className="grid grid-cols-2 gap-3">
                 <Input
-                  label="Start"
+                  label="Start date"
                   type="date"
                   value={contractForm.startDate}
                   onChange={(event) =>
@@ -340,7 +443,7 @@ export default function ContractsPage() {
                   required
                 />
                 <Input
-                  label="End"
+                  label="End date"
                   type="date"
                   value={contractForm.endDate}
                   onChange={(event) =>
@@ -348,166 +451,200 @@ export default function ContractsPage() {
                   }
                 />
               </div>
-              <select
-                className={selectClass}
+              <Select
+                label="Billing frequency"
+                options={billingOptions}
                 value={contractForm.billingFrequency}
                 onChange={(event) =>
-                  setContractForm((form) => ({
-                    ...form,
-                    billingFrequency: event.target.value,
-                  }))
+                  setContractForm((form) => ({ ...form, billingFrequency: event.target.value }))
                 }
-              >
-                {billingFrequencies.map((frequency) => (
-                  <option key={frequency} value={frequency}>
-                    {frequency.replaceAll("_", " ").toLowerCase()}
-                  </option>
-                ))}
-              </select>
-              <Button type="submit" loading={saving} fullWidth disabled={!contractForm.customerId}>
-                <Plus className="h-4 w-4" />
-                Save contract
-              </Button>
-            </form>
-          </Card>
+              />
+            </DrawerSection>
+          </div>
+          <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
+            <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={saving} disabled={!contractForm.customerId}>
+              <Plus className="h-4 w-4" />
+              Save contract
+            </Button>
+          </div>
+        </form>
+      </Drawer>
 
-          <Card>
-            <CardHeader title="Attach facility" />
-            <form className="space-y-4 p-5" onSubmit={attachFacility}>
-              <select
-                className={selectClass}
-                value={selectedContractId}
-                onChange={(event) => setSelectedContractId(event.target.value)}
-                disabled={!contracts.length}
-              >
-                {contracts.map((contract) => (
-                  <option key={contract.id} value={contract.id}>
-                    {contract.contractNumber} - {contract.title}
-                  </option>
-                ))}
-              </select>
-              <select
-                className={selectClass}
-                value={facilityId}
-                onChange={(event) => setFacilityId(event.target.value)}
-                disabled={!matchingFacilities.length}
-              >
-                {matchingFacilities.map((facility) => (
-                  <option key={facility.id} value={facility.id}>
-                    {facility.name}
-                  </option>
-                ))}
-              </select>
-              <Button
-                type="submit"
-                loading={linkSaving}
-                fullWidth
-                disabled={!selectedContractId || !facilityId}
-                variant="outline"
-              >
-                Attach facility
-              </Button>
-            </form>
-          </Card>
+      {/* Attach facility */}
+      <Drawer
+        open={facilityOpen}
+        onClose={() => setFacilityOpen(false)}
+        title="Attach facility"
+        description="Link a facility to a contract."
+        icon={Building2}
+      >
+        <form onSubmit={attachFacility} className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
+            {error && <Alert tone="error">{error}</Alert>}
+            <Select
+              label="Contract"
+              options={contractOptions}
+              value={selectedContractId}
+              onChange={(event) => setSelectedContractId(event.target.value)}
+              disabled={!hasContracts}
+            />
+            <Select
+              label="Facility"
+              options={matchingFacilities.map((facility) => ({
+                value: facility.id,
+                label: facility.name,
+              }))}
+              value={facilityId}
+              onChange={(event) => setFacilityId(event.target.value)}
+              disabled={!matchingFacilities.length}
+            />
+            {selectedContract && !matchingFacilities.length && (
+              <p className="text-sm text-slate-500">
+                This customer has no active facilities yet. Add one on the
+                Facilities page first.
+              </p>
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
+            <Button type="button" variant="ghost" onClick={() => setFacilityOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              loading={linkSaving}
+              disabled={!selectedContractId || !facilityId}
+              variant="secondary"
+            >
+              <Building2 className="h-4 w-4" />
+              Attach facility
+            </Button>
+          </div>
+        </form>
+      </Drawer>
 
-          <Card>
-            <CardHeader title="Add contract service" />
-            <form className="space-y-4 p-5" onSubmit={addContractService}>
-              <select
-                className={selectClass}
-                value={contractServiceForm.serviceId}
+      {/* Add contract service */}
+      <Drawer
+        open={serviceOpen}
+        onClose={() => setServiceOpen(false)}
+        title="Add contract service"
+        description="Add a recurring service line to a contract."
+        icon={Wrench}
+      >
+        <form onSubmit={addContractService} className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
+            {error && <Alert tone="error">{error}</Alert>}
+            <Select
+              label="Contract"
+              options={contractOptions}
+              value={selectedContractId}
+              onChange={(event) => setSelectedContractId(event.target.value)}
+              disabled={!hasContracts}
+            />
+            <Select
+              label="Service"
+              options={services.map((service) => ({
+                value: service.id,
+                label: service.name,
+              }))}
+              value={contractServiceForm.serviceId}
+              onChange={(event) =>
+                setContractServiceForm((form) => ({ ...form, serviceId: event.target.value }))
+              }
+              disabled={!services.length}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                label="Frequency"
+                options={recurrenceOptions}
+                value={contractServiceForm.frequency}
                 onChange={(event) =>
-                  setContractServiceForm((form) => ({ ...form, serviceId: event.target.value }))
+                  setContractServiceForm((form) => ({ ...form, frequency: event.target.value }))
                 }
-                disabled={!services.length}
-              >
-                {services.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
-              </select>
-              <div className="grid grid-cols-2 gap-3">
-                <select
-                  className={selectClass}
-                  value={contractServiceForm.frequency}
-                  onChange={(event) =>
-                    setContractServiceForm((form) => ({
-                      ...form,
-                      frequency: event.target.value,
-                    }))
-                  }
-                >
-                  {recurrenceFrequencies.map((frequency) => (
-                    <option key={frequency} value={frequency}>
-                      {frequency.replaceAll("_", " ").toLowerCase()}
-                    </option>
-                  ))}
-                </select>
-                <Input
-                  label="Quantity"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={contractServiceForm.quantity}
-                  onChange={(event) =>
-                    setContractServiceForm((form) => ({
-                      ...form,
-                      quantity: event.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
+              />
               <Input
-                label="Price override"
+                label="Quantity"
                 type="number"
                 min="0"
                 step="0.01"
-                value={contractServiceForm.price}
+                value={contractServiceForm.quantity}
                 onChange={(event) =>
-                  setContractServiceForm((form) => ({ ...form, price: event.target.value }))
+                  setContractServiceForm((form) => ({ ...form, quantity: event.target.value }))
                 }
+                required
               />
-              <Button
-                type="submit"
-                loading={serviceSaving}
-                fullWidth
-                disabled={!selectedContractId || !contractServiceForm.serviceId}
-                variant="secondary"
-              >
-                Add service
-              </Button>
-            </form>
-          </Card>
+            </div>
+            <Input
+              label="Price override"
+              type="number"
+              min="0"
+              step="0.01"
+              value={contractServiceForm.price}
+              onChange={(event) =>
+                setContractServiceForm((form) => ({ ...form, price: event.target.value }))
+              }
+              placeholder="Leave blank to use service price"
+            />
+          </div>
+          <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
+            <Button type="button" variant="ghost" onClick={() => setServiceOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              loading={serviceSaving}
+              disabled={!selectedContractId || !contractServiceForm.serviceId}
+              variant="secondary"
+            >
+              <Plus className="h-4 w-4" />
+              Add service
+            </Button>
+          </div>
+        </form>
+      </Drawer>
 
-          <Card>
-            <CardHeader title="Update status" />
-            <form className="space-y-4 p-5" onSubmit={updateStatus}>
-              <select
-                className={selectClass}
-                value={status}
-                onChange={(event) => setStatus(event.target.value)}
-              >
-                {contractStatuses.map((item) => (
-                  <option key={item} value={item}>
-                    {item.replaceAll("_", " ").toLowerCase()}
-                  </option>
-                ))}
-              </select>
-              <Button
-                type="submit"
-                loading={statusSaving}
-                fullWidth
-                disabled={!selectedContractId}
-                variant="ghost"
-              >
-                Save status
-              </Button>
-            </form>
-          </Card>
-        </div>
-      </div>
+      {/* Update status */}
+      <Drawer
+        open={statusOpen}
+        onClose={() => setStatusOpen(false)}
+        title="Update status"
+        description="Change the lifecycle status of a contract."
+        icon={SlidersHorizontal}
+      >
+        <form onSubmit={updateStatus} className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
+            {error && <Alert tone="error">{error}</Alert>}
+            <Select
+              label="Contract"
+              options={contractOptions}
+              value={selectedContractId}
+              onChange={(event) => setSelectedContractId(event.target.value)}
+              disabled={!hasContracts}
+            />
+            <Select
+              label="Status"
+              options={statusOptions}
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+            />
+          </div>
+          <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
+            <Button type="button" variant="ghost" onClick={() => setStatusOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              loading={statusSaving}
+              disabled={!selectedContractId}
+              variant="secondary"
+            >
+              Save status
+            </Button>
+          </div>
+        </form>
+      </Drawer>
     </div>
   );
 }

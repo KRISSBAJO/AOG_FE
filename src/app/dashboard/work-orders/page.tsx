@@ -2,20 +2,36 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Clock, Plus, RefreshCw, Search } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  ListChecks,
+  Plus,
+  RefreshCw,
+  Search,
+  UserPlus,
+} from "lucide-react";
 
 import { StatusPill } from "@/components/dashboard/StatusPill";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
+import { Drawer, DrawerSection } from "@/components/dashboard/Drawer";
+import { Alert, Button, Card, CardHeader, Input, Select } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
 import { operationsApi, WorkOrder } from "@/lib/api/operations";
 import { workforceApi, Employee } from "@/lib/api/workforce";
 import { Customer, Facility, phase3Api } from "@/lib/phase3-api";
+import { toast } from "@/lib/toast";
 
-const selectClass =
-  "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40";
+const enumLabel = (value: string) => value.replaceAll("_", " ").toLowerCase();
 
-const serviceLines = ["CLEANING", "SECURITY", "PARKING", "EVENT_SETUP", "FACILITY_SUPPORT", "OTHER"];
+const serviceLineOptions = [
+  "CLEANING",
+  "SECURITY",
+  "PARKING",
+  "EVENT_SETUP",
+  "FACILITY_SUPPORT",
+  "OTHER",
+].map((value) => ({ value, label: enumLabel(value) }));
 
 export default function WorkOrdersPage() {
   const router = useRouter();
@@ -29,6 +45,10 @@ export default function WorkOrdersPage() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [taskOpen, setTaskOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const anyDrawerOpen = createOpen || taskOpen || assignOpen;
   const [form, setForm] = useState({
     customerId: "",
     facilityId: "",
@@ -90,6 +110,8 @@ export default function WorkOrdersPage() {
       setForm((current) => ({ ...current, title: "", scheduledStartAt: "", scheduledEndAt: "" }));
       setTaskForm((current) => ({ ...current, workOrderId: created.id }));
       setAssignmentForm((current) => ({ ...current, workOrderId: created.id }));
+      setCreateOpen(false);
+      toast.success(`${created.title} was created.`, "Work order created");
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -102,9 +124,12 @@ export default function WorkOrdersPage() {
     event.preventDefault();
     if (!taskForm.workOrderId) return;
     setActionId(taskForm.workOrderId);
+    setError(null);
     try {
       await operationsApi.addWorkOrderTask(taskForm.workOrderId, { title: taskForm.title });
       setTaskForm((current) => ({ ...current, title: "" }));
+      setTaskOpen(false);
+      toast.success("Task added.", "Work order updated");
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -117,11 +142,14 @@ export default function WorkOrdersPage() {
     event.preventDefault();
     if (!assignmentForm.workOrderId || !assignmentForm.employeeId) return;
     setActionId(assignmentForm.workOrderId);
+    setError(null);
     try {
       await operationsApi.addWorkOrderAssignment(assignmentForm.workOrderId, {
         employeeId: assignmentForm.employeeId,
         role: assignmentForm.role,
       });
+      setAssignOpen(false);
+      toast.success("Employee assigned.", "Work order updated");
       await loadData(search);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -132,6 +160,7 @@ export default function WorkOrdersPage() {
 
   async function setStatus(id: string, status: string) {
     setActionId(id);
+    setError(null);
     try {
       await operationsApi.updateWorkOrderStatus(id, { status });
       await loadData(search);
@@ -149,112 +178,214 @@ export default function WorkOrdersPage() {
         description={`${total} work orders scheduled or in progress.`}
         eyebrow="Field operations"
         actions={
-          <form
-            className="flex w-full flex-col gap-2 sm:w-[460px] sm:flex-row"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void loadData(search);
-            }}
-          >
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search work orders"
-              icon={<Search className="h-4 w-4" />}
-            />
-            <Button type="submit" variant="outline">
-              <RefreshCw className="h-4 w-4" />
-              Refresh
+          <>
+            <form
+              className="flex w-full gap-2 sm:w-64"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void loadData(search);
+              }}
+            >
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search work orders"
+                icon={<Search className="h-4 w-4" />}
+              />
+              <Button type="submit" variant="outline" aria-label="Refresh">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </form>
+            <Button variant="outline" onClick={() => setTaskOpen(true)} disabled={!workOrders.length}>
+              <ListChecks className="h-4 w-4" />
+              Add task
             </Button>
-          </form>
+            <Button variant="outline" onClick={() => setAssignOpen(true)} disabled={!workOrders.length}>
+              <UserPlus className="h-4 w-4" />
+              Assign staff
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} disabled={!customers.length}>
+              <Plus className="h-4 w-4" />
+              New work order
+            </Button>
+          </>
         }
       />
-      {error && <Alert tone="error">{error}</Alert>}
+      {error && !anyDrawerOpen && <Alert tone="error">{error}</Alert>}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <Card>
-          <CardHeader title="Execution board" />
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-                  <th className="px-5 py-3 font-medium">Work order</th>
-                  <th className="px-5 py-3 font-medium">Customer</th>
-                  <th className="px-5 py-3 font-medium">Schedule</th>
-                  <th className="px-5 py-3 font-medium">Tasks</th>
-                  <th className="px-5 py-3 font-medium">Staff</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium">Actions</th>
+      <Card>
+        <CardHeader title="Execution board" />
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                <th className="px-5 py-3 font-medium">Work order</th>
+                <th className="px-5 py-3 font-medium">Customer</th>
+                <th className="px-5 py-3 font-medium">Schedule</th>
+                <th className="px-5 py-3 font-medium">Tasks</th>
+                <th className="px-5 py-3 font-medium">Staff</th>
+                <th className="px-5 py-3 font-medium">Status</th>
+                <th className="px-5 py-3 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {workOrders.map((workOrder) => (
+                <tr key={workOrder.id} className="cursor-pointer hover:bg-slate-50" onClick={() => router.push(`/dashboard/work-orders/detail?id=${workOrder.id}`)}>
+                  <td className="px-5 py-3.5"><p className="font-medium text-slate-900">{workOrder.title}</p><p className="text-xs text-slate-400">{workOrder.workOrderNumber}</p></td>
+                  <td className="px-5 py-3.5 text-slate-600">{workOrder.customer?.name || "Not set"}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{workOrder.scheduledStartAt ? new Date(workOrder.scheduledStartAt).toLocaleString() : "Not scheduled"}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{workOrder._count?.tasks ?? 0}</td>
+                  <td className="px-5 py-3.5 text-slate-600">{workOrder._count?.assignments ?? 0}</td>
+                  <td className="px-5 py-3.5"><StatusPill status={workOrder.status} /></td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="ghost" aria-label="Mark in progress" disabled={actionId === workOrder.id} onClick={(event) => { event.stopPropagation(); void setStatus(workOrder.id, "IN_PROGRESS"); }}><Clock className="h-4 w-4" /></Button>
+                      <Button type="button" size="sm" variant="outline" aria-label="Mark completed" disabled={actionId === workOrder.id} onClick={(event) => { event.stopPropagation(); void setStatus(workOrder.id, "COMPLETED"); }}><CheckCircle2 className="h-4 w-4" /></Button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {workOrders.map((workOrder) => (
-                  <tr key={workOrder.id} className="cursor-pointer hover:bg-slate-50" onClick={() => router.push(`/dashboard/work-orders/detail?id=${workOrder.id}`)}>
-                    <td className="px-5 py-3.5"><p className="font-medium text-slate-900">{workOrder.title}</p><p className="text-xs text-slate-400">{workOrder.workOrderNumber}</p></td>
-                    <td className="px-5 py-3.5 text-slate-600">{workOrder.customer?.name || "Not set"}</td>
-                    <td className="px-5 py-3.5 text-slate-600">{workOrder.scheduledStartAt ? new Date(workOrder.scheduledStartAt).toLocaleString() : "Not scheduled"}</td>
-                    <td className="px-5 py-3.5 text-slate-600">{workOrder._count?.tasks ?? 0}</td>
-                    <td className="px-5 py-3.5 text-slate-600">{workOrder._count?.assignments ?? 0}</td>
-                    <td className="px-5 py-3.5"><StatusPill status={workOrder.status} /></td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex gap-2">
-                        <Button type="button" size="sm" variant="ghost" disabled={actionId === workOrder.id} onClick={(event) => { event.stopPropagation(); void setStatus(workOrder.id, "IN_PROGRESS"); }}><Clock className="h-4 w-4" /></Button>
-                        <Button type="button" size="sm" variant="outline" disabled={actionId === workOrder.id} onClick={(event) => { event.stopPropagation(); void setStatus(workOrder.id, "COMPLETED"); }}><CheckCircle2 className="h-4 w-4" /></Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {!loading && workOrders.length === 0 && (
-                  <tr><td className="px-5 py-8 text-center text-slate-500" colSpan={7}>No work orders found.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+              ))}
+              {loading && (
+                <tr><td className="px-5 py-8 text-center text-slate-400" colSpan={7}>Loading work orders…</td></tr>
+              )}
+              {!loading && workOrders.length === 0 && (
+                <tr>
+                  <td className="px-5 py-12 text-center" colSpan={7}>
+                    <p className="text-sm font-medium text-slate-900">No work orders yet</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {customers.length
+                        ? "Create a work order to schedule and dispatch a job."
+                        : "Add a customer first, then create work orders."}
+                    </p>
+                    {customers.length > 0 && (
+                      <Button className="mt-4" onClick={() => setCreateOpen(true)}>
+                        <Plus className="h-4 w-4" />
+                        New work order
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader title="Create work order" />
-            <form className="space-y-4 p-5" onSubmit={createWorkOrder}>
-              <select className={selectClass} value={form.customerId} onChange={(event) => setForm((current) => ({ ...current, customerId: event.target.value }))} required>
-                {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
-              </select>
-              <select className={selectClass} value={form.facilityId} onChange={(event) => setForm((current) => ({ ...current, facilityId: event.target.value }))}>
-                <option value="">No facility</option>
-                {facilities.filter((facility) => !form.customerId || facility.customerId === form.customerId).map((facility) => <option key={facility.id} value={facility.id}>{facility.name}</option>)}
-              </select>
-              <Input label="Title" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} required />
-              <select className={selectClass} value={form.serviceLine} onChange={(event) => setForm((current) => ({ ...current, serviceLine: event.target.value }))}>
-                {serviceLines.map((line) => <option key={line} value={line}>{line.replaceAll("_", " ").toLowerCase()}</option>)}
-              </select>
+      {/* Create work order */}
+      <Drawer
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="New work order"
+        description="Schedule a job against a customer and facility."
+        icon={ListChecks}
+      >
+        <form onSubmit={createWorkOrder} className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
+            {error && <Alert tone="error">{error}</Alert>}
+            <DrawerSection title="Job">
+              <Select
+                label="Customer"
+                options={customers.map((customer) => ({ value: customer.id, label: customer.name }))}
+                value={form.customerId}
+                onChange={(event) => setForm((current) => ({ ...current, customerId: event.target.value }))}
+                required
+              />
+              <Select
+                label="Facility"
+                options={[
+                  { value: "", label: "No facility" },
+                  ...facilities
+                    .filter((facility) => !form.customerId || facility.customerId === form.customerId)
+                    .map((facility) => ({ value: facility.id, label: facility.name })),
+                ]}
+                value={form.facilityId}
+                onChange={(event) => setForm((current) => ({ ...current, facilityId: event.target.value }))}
+              />
+              <Input
+                label="Title"
+                value={form.title}
+                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+                placeholder="Nightly cleaning — floors 1–4"
+                required
+              />
+              <Select
+                label="Service line"
+                options={serviceLineOptions}
+                value={form.serviceLine}
+                onChange={(event) => setForm((current) => ({ ...current, serviceLine: event.target.value }))}
+              />
+            </DrawerSection>
+
+            <DrawerSection title="Schedule">
               <div className="grid grid-cols-2 gap-3">
                 <Input label="Start" type="datetime-local" value={form.scheduledStartAt} onChange={(event) => setForm((current) => ({ ...current, scheduledStartAt: event.target.value }))} />
                 <Input label="End" type="datetime-local" value={form.scheduledEndAt} onChange={(event) => setForm((current) => ({ ...current, scheduledEndAt: event.target.value }))} />
               </div>
-              <Button type="submit" loading={saving} fullWidth disabled={!form.customerId}><Plus className="h-4 w-4" />Save work order</Button>
-            </form>
-          </Card>
+            </DrawerSection>
+          </div>
+          <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
+            <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button type="submit" loading={saving} disabled={!form.customerId}><Plus className="h-4 w-4" />Save work order</Button>
+          </div>
+        </form>
+      </Drawer>
 
-          <Card>
-            <CardHeader title="Task and staff" />
-            <div className="space-y-4 p-5">
-              <form className="space-y-3" onSubmit={addTask}>
-                <select className={selectClass} value={taskForm.workOrderId} onChange={(event) => setTaskForm((current) => ({ ...current, workOrderId: event.target.value }))}>
-                  {workOrders.map((workOrder) => <option key={workOrder.id} value={workOrder.id}>{workOrder.workOrderNumber}</option>)}
-                </select>
-                <Input label="Task title" value={taskForm.title} onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))} required />
-                <Button type="submit" fullWidth variant="secondary" loading={actionId === taskForm.workOrderId}>Add task</Button>
-              </form>
-              <form className="space-y-3" onSubmit={addAssignment}>
-                <select className={selectClass} value={assignmentForm.employeeId} onChange={(event) => setAssignmentForm((current) => ({ ...current, employeeId: event.target.value }))}>
-                  {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.firstName} {employee.lastName}</option>)}
-                </select>
-                <Button type="submit" fullWidth variant="outline" loading={actionId === assignmentForm.workOrderId} disabled={!assignmentForm.workOrderId || !assignmentForm.employeeId}>Assign employee</Button>
-              </form>
-            </div>
-          </Card>
-        </div>
-      </div>
+      {/* Add task */}
+      <Drawer
+        open={taskOpen}
+        onClose={() => setTaskOpen(false)}
+        title="Add task"
+        description="Add a checklist task to a work order."
+        icon={ListChecks}
+      >
+        <form onSubmit={addTask} className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
+            {error && <Alert tone="error">{error}</Alert>}
+            <Select
+              label="Work order"
+              options={workOrders.map((workOrder) => ({ value: workOrder.id, label: `${workOrder.workOrderNumber} — ${workOrder.title}` }))}
+              value={taskForm.workOrderId}
+              onChange={(event) => setTaskForm((current) => ({ ...current, workOrderId: event.target.value }))}
+            />
+            <Input label="Task title" value={taskForm.title} onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))} required />
+          </div>
+          <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
+            <Button type="button" variant="ghost" onClick={() => setTaskOpen(false)}>Cancel</Button>
+            <Button type="submit" variant="secondary" loading={actionId === taskForm.workOrderId} disabled={!taskForm.workOrderId}><Plus className="h-4 w-4" />Add task</Button>
+          </div>
+        </form>
+      </Drawer>
+
+      {/* Assign staff */}
+      <Drawer
+        open={assignOpen}
+        onClose={() => setAssignOpen(false)}
+        title="Assign staff"
+        description="Assign an employee to a work order."
+        icon={UserPlus}
+      >
+        <form onSubmit={addAssignment} className="flex h-full flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
+            {error && <Alert tone="error">{error}</Alert>}
+            <Select
+              label="Work order"
+              options={workOrders.map((workOrder) => ({ value: workOrder.id, label: `${workOrder.workOrderNumber} — ${workOrder.title}` }))}
+              value={assignmentForm.workOrderId}
+              onChange={(event) => setAssignmentForm((current) => ({ ...current, workOrderId: event.target.value }))}
+            />
+            <Select
+              label="Employee"
+              options={employees.map((employee) => ({ value: employee.id, label: `${employee.firstName} ${employee.lastName}` }))}
+              value={assignmentForm.employeeId}
+              onChange={(event) => setAssignmentForm((current) => ({ ...current, employeeId: event.target.value }))}
+            />
+          </div>
+          <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
+            <Button type="button" variant="ghost" onClick={() => setAssignOpen(false)}>Cancel</Button>
+            <Button type="submit" variant="secondary" loading={actionId === assignmentForm.workOrderId} disabled={!assignmentForm.workOrderId || !assignmentForm.employeeId}><UserPlus className="h-4 w-4" />Assign employee</Button>
+          </div>
+        </form>
+      </Drawer>
     </div>
   );
 }
