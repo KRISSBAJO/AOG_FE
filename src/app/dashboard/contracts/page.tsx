@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, FileText, Plus, RefreshCw, Search } from "lucide-react";
 
 import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
+import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusPill } from "@/components/dashboard/StatusPill";
 import { getErrorMessage } from "@/lib/api";
 import {
@@ -204,32 +205,31 @@ export default function ContractsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Contracts</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {total} contracts across customers, facilities, and recurring services.
-          </p>
-        </div>
-        <form
-          className="flex w-full flex-col gap-2 sm:max-w-md sm:flex-row"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void loadData(search);
-          }}
-        >
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search contracts"
-            icon={<Search className="h-4 w-4" />}
-          />
-          <Button type="submit" variant="outline">
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-        </form>
-      </div>
+      <PageHeader
+        title="Contracts"
+        description={`${total} contracts across customers, facilities, and recurring services.`}
+        eyebrow="Customer operations"
+        actions={
+          <form
+            className="flex w-full flex-col gap-2 sm:w-[460px] sm:flex-row"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void loadData(search);
+            }}
+          >
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search contracts"
+              icon={<Search className="h-4 w-4" />}
+            />
+            <Button type="submit" variant="outline">
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </form>
+        }
+      />
 
       {error && <Alert tone="error">{error}</Alert>}
 

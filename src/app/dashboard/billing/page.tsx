@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CreditCard, FileText, Plus, RefreshCw, Send } from "lucide-react";
 
+import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusPill } from "@/components/dashboard/StatusPill";
 import { Alert, Button, Card, CardHeader, Input, Textarea } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
@@ -156,16 +157,17 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Billing</h1>
-          <p className="mt-1 text-sm text-slate-500">{invoices.length} invoices and {payments.length} recent payments.</p>
-        </div>
-        <Button type="button" variant="outline" onClick={() => void loadData(selectedInvoiceId)}>
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </Button>
-      </div>
+      <PageHeader
+        title="Billing"
+        description={`${invoices.length} invoices and ${payments.length} recent payments.`}
+        eyebrow="Workforce & finance"
+        actions={
+          <Button type="button" variant="outline" onClick={() => void loadData(selectedInvoiceId)}>
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+        }
+      />
       {error && <Alert tone="error">{error}</Alert>}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">

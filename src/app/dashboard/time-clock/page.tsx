@@ -10,6 +10,7 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 
+import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusPill } from "@/components/dashboard/StatusPill";
 import {
   Button,
@@ -181,25 +182,22 @@ export default function TimeClockPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-            Time Clock
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Staff clock-in, clock-out, and end-of-day work proof.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          loading={loading}
-          onClick={() => void loadData()}
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </Button>
-      </div>
+      <PageHeader
+        title="Time Clock"
+        description="Staff clock-in, clock-out, and end-of-day work proof."
+        eyebrow="Staff portal"
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            loading={loading}
+            onClick={() => void loadData()}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+        }
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         {profileMissing ? (

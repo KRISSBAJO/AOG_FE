@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Banknote, Clock3, RefreshCw, Users } from "lucide-react";
 
+import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
 import { payrollApi, type PayrollSummary } from "@/lib/api/staff";
@@ -63,37 +64,34 @@ export default function PayrollPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-            Payroll
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Two-day pay period hours from staff clock-in and clock-out records.
-          </p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-[160px_160px_auto]">
-          <Input
-            type="date"
-            value={from}
-            onChange={(event) => setFrom(event.target.value)}
-          />
-          <Input
-            type="date"
-            value={to}
-            onChange={(event) => setTo(event.target.value)}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            loading={loading}
-            onClick={() => void loadData()}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Payroll"
+        description="Two-day pay period hours from staff clock-in and clock-out records."
+        eyebrow="Workforce & finance"
+        actions={
+          <div className="grid gap-2 sm:grid-cols-[150px_150px_auto]">
+            <Input
+              type="date"
+              value={from}
+              onChange={(event) => setFrom(event.target.value)}
+            />
+            <Input
+              type="date"
+              value={to}
+              onChange={(event) => setTo(event.target.value)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              loading={loading}
+              onClick={() => void loadData()}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+        }
+      />
 
       {error && <Alert tone="error">{error}</Alert>}
 

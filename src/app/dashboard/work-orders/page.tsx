@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Clock, Plus, RefreshCw, Search } from "lucide-react";
 
 import { StatusPill } from "@/components/dashboard/StatusPill";
+import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
 import { operationsApi, WorkOrder } from "@/lib/api/operations";
@@ -143,16 +144,31 @@ export default function WorkOrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Work Orders</h1>
-          <p className="mt-1 text-sm text-slate-500">{total} work orders scheduled or in progress.</p>
-        </div>
-        <form className="flex w-full flex-col gap-2 sm:max-w-md sm:flex-row" onSubmit={(event) => { event.preventDefault(); void loadData(search); }}>
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search work orders" icon={<Search className="h-4 w-4" />} />
-          <Button type="submit" variant="outline"><RefreshCw className="h-4 w-4" />Refresh</Button>
-        </form>
-      </div>
+      <PageHeader
+        title="Work Orders"
+        description={`${total} work orders scheduled or in progress.`}
+        eyebrow="Field operations"
+        actions={
+          <form
+            className="flex w-full flex-col gap-2 sm:w-[460px] sm:flex-row"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void loadData(search);
+            }}
+          >
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search work orders"
+              icon={<Search className="h-4 w-4" />}
+            />
+            <Button type="submit" variant="outline">
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </form>
+        }
+      />
       {error && <Alert tone="error">{error}</Alert>}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">

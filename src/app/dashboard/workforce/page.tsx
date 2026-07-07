@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Plus, RefreshCw, Search, Users } from "lucide-react";
 
+import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusPill } from "@/components/dashboard/StatusPill";
 import { Button, Card, CardHeader, Input } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
@@ -194,34 +195,31 @@ export default function WorkforcePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-            Workforce
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {total} employees across {departments.length} active departments.
-          </p>
-        </div>
-        <form
-          className="flex w-full flex-col gap-2 sm:max-w-md sm:flex-row"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void loadData(search);
-          }}
-        >
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search employees"
-            icon={<Search className="h-4 w-4" />}
-          />
-          <Button type="submit" variant="outline">
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-        </form>
-      </div>
+      <PageHeader
+        title="Workforce"
+        description={`${total} employees across ${departments.length} active departments.`}
+        eyebrow="Workforce & finance"
+        actions={
+          <form
+            className="flex w-full flex-col gap-2 sm:w-[420px] sm:flex-row"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void loadData(search);
+            }}
+          >
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search employees"
+              icon={<Search className="h-4 w-4" />}
+            />
+            <Button type="submit" variant="outline">
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </form>
+        }
+      />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card>
           <CardHeader title="Employee register" />

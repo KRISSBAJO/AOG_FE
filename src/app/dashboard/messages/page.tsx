@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Bell, CheckCheck, MessageSquarePlus, RefreshCw, Send } from "lucide-react";
 
+import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusPill } from "@/components/dashboard/StatusPill";
 import { Alert, Button, Card, CardHeader, Input, Textarea } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
@@ -162,24 +163,23 @@ export default function MessagesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Messages</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {conversations.length} conversations and {notifications.length} latest notifications.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => void readAll()} disabled={saving}>
-            <CheckCheck className="h-4 w-4" />
-            Read all
-          </Button>
-          <Button type="button" variant="outline" onClick={() => void loadData(selectedId)}>
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Messages"
+        description={`${conversations.length} conversations and ${notifications.length} latest notifications.`}
+        eyebrow="Collaboration"
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => void readAll()} disabled={saving}>
+              <CheckCheck className="h-4 w-4" />
+              Read all
+            </Button>
+            <Button type="button" variant="outline" onClick={() => void loadData(selectedId)}>
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+        }
+      />
       {error && <Alert tone="error">{error}</Alert>}
 
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)_360px]">

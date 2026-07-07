@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BarChart3, FileText, RefreshCw } from "lucide-react";
 
+import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusPill } from "@/components/dashboard/StatusPill";
 import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
@@ -47,20 +48,21 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Reports</h1>
-          <p className="mt-1 text-sm text-slate-500">Operational and finance report read models.</p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-[160px_160px_auto]">
-          <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
-          <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
-          <Button type="button" variant="outline" onClick={() => void loadData()} loading={loading}>
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Reports"
+        description="Operational and finance report read models."
+        eyebrow="Workspace intelligence"
+        actions={
+          <div className="grid gap-2 sm:grid-cols-[150px_150px_auto]">
+            <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
+            <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
+            <Button type="button" variant="outline" onClick={() => void loadData()} loading={loading}>
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+        }
+      />
       {error && <Alert tone="error">{error}</Alert>}
 
       <div className="grid gap-6 xl:grid-cols-3">
