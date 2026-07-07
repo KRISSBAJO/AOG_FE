@@ -76,19 +76,18 @@ export default function Hero() {
 
           <motion.h1
             variants={item}
-            className="mt-6 max-w-2xl text-4xl font-black leading-[1.06] tracking-tight text-white sm:text-5xl lg:text-6xl"
+            className="mt-6 max-w-xl text-3xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-4xl lg:text-5xl xl:text-6xl"
           >
-            One platform to manage every{" "}
-            <span className="text-amber-400">facility service</span> you deliver
+            Facility services,{" "}
+            <span className="text-amber-400">managed</span> in one place
           </motion.h1>
 
           <motion.p
             variants={item}
             className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg"
           >
-            Book, schedule, monitor, and bill cleaning, security, parking,
-            event setup, and facility support from one AOG Services command
-            center.
+            Book, schedule, track, and bill cleaning, security, parking,
+            events, and facility support from one command center.
           </motion.p>
 
           <motion.div variants={item} className="mt-8 flex flex-col gap-3 sm:flex-row">

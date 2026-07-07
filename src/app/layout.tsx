@@ -1,22 +1,24 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import MotionProvider from "@/components/landing/motion/MotionProvider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "AOG Services | Enterprise Facilities Operations Management Platform",
   description:
-    "AOG OS unifies cleaning, security, parking, events, and facility maintenance into one enterprise operations platform — contracts, staffing, scheduling, and billing in a single system of record.",
+    "AOG OS unifies cleaning, security, parking, events, and facility maintenance into one enterprise operations platform.",
 };
 
 export default function RootLayout({
@@ -27,9 +29,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${plusJakarta.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-white">
+      <body className="flex min-h-full flex-col bg-white">
         <MotionProvider>{children}</MotionProvider>
       </body>
     </html>
