@@ -35,6 +35,7 @@ export type PublicBookingCreated = {
   message: string;
   requestedStartAt?: string | null;
   createdAt: string;
+  statusUrl?: string;
 };
 
 export type PublicBookingStatus = {
@@ -57,6 +58,12 @@ export type PublicBookingStatus = {
   workOrders: Array<{
     workOrderNumber: string;
     status: string;
+  }>;
+  timeline: Array<{
+    status: string;
+    statusCode: string;
+    note?: string | null;
+    at: string;
   }>;
 };
 

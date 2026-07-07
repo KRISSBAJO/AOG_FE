@@ -16,6 +16,8 @@ import {
   MessageSquare,
   FolderOpen,
   Wrench,
+  Timer,
+  ReceiptText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,7 +40,11 @@ export const navSections: NavSection[] = [
   {
     title: "Customer Ops",
     items: [
-      { label: "Customers", href: "/dashboard/customers", icon: BriefcaseBusiness },
+      {
+        label: "Customers",
+        href: "/dashboard/customers",
+        icon: BriefcaseBusiness,
+      },
       { label: "Facilities", href: "/dashboard/facilities", icon: Building2 },
       { label: "Services", href: "/dashboard/services", icon: Sparkles },
       { label: "Contracts", href: "/dashboard/contracts", icon: FileText },
@@ -47,9 +53,17 @@ export const navSections: NavSection[] = [
   {
     title: "Field Ops",
     items: [
-      { label: "Service Requests", href: "/dashboard/service-requests", icon: ClipboardList },
+      {
+        label: "Service Requests",
+        href: "/dashboard/service-requests",
+        icon: ClipboardList,
+      },
       { label: "Work Orders", href: "/dashboard/work-orders", icon: Wrench },
-      { label: "Scheduling", href: "/dashboard/scheduling", icon: CalendarClock },
+      {
+        label: "Scheduling",
+        href: "/dashboard/scheduling",
+        icon: CalendarClock,
+      },
       { label: "QA", href: "/dashboard/qa", icon: ClipboardCheck },
       { label: "Issues", href: "/dashboard/issues", icon: AlertTriangle },
     ],
@@ -58,6 +72,8 @@ export const navSections: NavSection[] = [
     title: "Workforce & Finance",
     items: [
       { label: "Workforce", href: "/dashboard/workforce", icon: Users },
+      { label: "Time Clock", href: "/dashboard/time-clock", icon: Timer },
+      { label: "Payroll", href: "/dashboard/payroll", icon: ReceiptText },
       { label: "Billing", href: "/dashboard/billing", icon: Wallet },
       { label: "Reports", href: "/dashboard/reports", icon: BarChart3 },
     ],

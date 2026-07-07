@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CheckCircle2, Clock3, Search } from "lucide-react";
+import { CheckCircle2, Circle, Clock3, Search } from "lucide-react";
 import { Alert, Button, Input } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
 import {
@@ -10,7 +10,9 @@ import {
 } from "@/lib/api/public-bookings";
 import { required } from "@/lib/validation";
 
-type Errors = Partial<Record<"orderNumber" | "lastName" | "emailOrPhone", string>>;
+type Errors = Partial<
+  Record<"orderNumber" | "lastName" | "emailOrPhone", string>
+>;
 
 function formatDate(value?: string | null) {
   if (!value) return "Not scheduled yet";
@@ -39,14 +41,21 @@ export default function BookingStatusLookup() {
     const next: Errors = {};
     if (!required(orderNumber)) next.orderNumber = "Enter your order number.";
     if (!required(lastName)) next.lastName = "Enter the requester last name.";
-    if (!required(emailOrPhone)) next.emailOrPhone = "Enter the email or phone used for booking.";
+    if (!required(emailOrPhone))
+      next.emailOrPhone = "Enter the email or phone used for booking.";
     setErrors(next);
     if (Object.keys(next).length) return;
 
     setLoading(true);
     setFormError(null);
     try {
-      setStatus(await lookupPublicServiceBooking({ orderNumber, lastName, emailOrPhone }));
+      setStatus(
+        await lookupPublicServiceBooking({
+          orderNumber,
+          lastName,
+          emailOrPhone,
+        }),
+      );
     } catch (error) {
       setStatus(null);
       setFormError(getErrorMessage(error));
@@ -190,6 +199,45 @@ export default function BookingStatusLookup() {
                       <span className="font-medium text-slate-500">
                         {workOrder.status}
                       </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {status.timeline.length > 0 && (
+              <div className="mt-6">
+                <p className="text-sm font-semibold text-slate-900">
+                  Status timeline
+                </p>
+                <div className="mt-3 space-y-3">
+                  {status.timeline.map((event, index) => (
+                    <div
+                      key={`${event.statusCode}-${event.at}-${index}`}
+                      className="flex gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
+                    >
+                      <span className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-sky-50 text-sky-600">
+                        {index === status.timeline.length - 1 ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <Circle className="h-3 w-3 fill-current" />
+                        )}
+                      </span>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <p className="text-sm font-semibold text-slate-900">
+                            {event.status}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {formatDate(event.at)}
+                          </p>
+                        </div>
+                        {event.note && (
+                          <p className="mt-1 text-sm leading-6 text-slate-500">
+                            {event.note}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
