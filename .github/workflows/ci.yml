@@ -23,6 +23,3 @@ jobs:
 
       - name: Build
         run: npm run build
-
-      - name: Prepare Amplify static bundle
-        run: npm run amplify:static

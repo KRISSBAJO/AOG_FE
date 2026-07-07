@@ -10,11 +10,11 @@ frontend:
     build:
       commands:
         - npm run build
-        - npm run amplify:static
   artifacts:
-    baseDirectory: .amplify-hosting
+    baseDirectory: .next
     files:
       - "**/*"
   cache:
     paths:
       - node_modules/**/*
+      - .next/cache/**/*
