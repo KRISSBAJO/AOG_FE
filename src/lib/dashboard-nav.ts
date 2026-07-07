@@ -11,6 +11,10 @@ import {
   Settings,
   BriefcaseBusiness,
   ClipboardList,
+  ClipboardCheck,
+  AlertTriangle,
+  MessageSquare,
+  FolderOpen,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -41,14 +45,23 @@ export const navSections: NavSection[] = [
       { label: "Service Requests", href: "/dashboard/service-requests", icon: ClipboardList },
       { label: "Work Orders", href: "/dashboard/work-orders", icon: Wrench },
       { label: "Scheduling", href: "/dashboard/scheduling", icon: CalendarClock },
+      { label: "QA", href: "/dashboard/qa", icon: ClipboardCheck },
+      { label: "Issues", href: "/dashboard/issues", icon: AlertTriangle },
     ],
   },
   {
     title: "Workforce & Finance",
     items: [
       { label: "Workforce", href: "/dashboard/workforce", icon: Users },
-      { label: "Finance", href: "/dashboard", icon: Wallet },
+      { label: "Billing", href: "/dashboard/billing", icon: Wallet },
       { label: "Reports", href: "/dashboard", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Collaboration",
+    items: [
+      { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
+      { label: "Files", href: "/dashboard/files", icon: FolderOpen },
     ],
   },
   {
