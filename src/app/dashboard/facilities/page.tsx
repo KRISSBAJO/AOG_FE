@@ -2,13 +2,14 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, MapPin, Plus, RefreshCw, Search } from "lucide-react";
+import { Building2, MapPin, Plus, RefreshCw, Search, Send } from "lucide-react";
 
-import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
+import { Alert, Button, Card, CardHeader, Checkbox, Input } from "@/components/ui";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusPill } from "@/components/dashboard/StatusPill";
 import { getErrorMessage } from "@/lib/api";
 import { Customer, Facility, phase3Api } from "@/lib/phase3-api";
+import { toast } from "@/lib/toast";
 
 const selectClass =
   "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40";
@@ -40,6 +41,7 @@ export default function FacilitiesPage() {
     phone: "",
     role: "FACILITY_MANAGER",
     isPrimary: true,
+    sendInvite: false,
   });
 
   async function loadData(nextSearch = search) {
@@ -112,17 +114,29 @@ export default function FacilitiesPage() {
     setError(null);
 
     try {
-      await phase3Api.createFacilityContact(selectedFacilityId, {
-        ...contactForm,
+      const { sendInvite, ...contactInput } = contactForm;
+      const contact = await phase3Api.createFacilityContact(selectedFacilityId, {
+        ...contactInput,
         email: contactForm.email || undefined,
         phone: contactForm.phone || undefined,
       });
+
+      if (sendInvite && contact.email) {
+        const invite = await phase3Api.inviteFacilityContact(contact.id);
+        await copyInviteLink(invite.inviteUrl);
+        toast.success(
+          `Invite sent to ${invite.email}. The link was copied locally.`,
+          "Portal invite ready",
+        );
+      }
+
       setContactForm({
         name: "",
         email: "",
         phone: "",
         role: "FACILITY_MANAGER",
         isPrimary: true,
+        sendInvite: false,
       });
       await loadData(search);
     } catch (err) {
@@ -342,6 +356,13 @@ export default function FacilitiesPage() {
                   setContactForm((form) => ({ ...form, phone: event.target.value }))
                 }
               />
+              <Checkbox
+                checked={contactForm.sendInvite}
+                onChange={(event) =>
+                  setContactForm((form) => ({ ...form, sendInvite: event.target.checked }))
+                }
+                label="Give portal access and send invite"
+              />
               <Button
                 type="submit"
                 loading={contactSaving}
@@ -349,7 +370,8 @@ export default function FacilitiesPage() {
                 disabled={!selectedFacilityId}
                 variant="secondary"
               >
-                Save contact
+                {contactForm.sendInvite && <Send className="h-4 w-4" />}
+                {contactForm.sendInvite ? "Save and invite" : "Save contact"}
               </Button>
             </form>
           </Card>
@@ -357,4 +379,12 @@ export default function FacilitiesPage() {
       </div>
     </div>
   );
+}
+
+async function copyInviteLink(inviteUrl: string) {
+  try {
+    await navigator.clipboard.writeText(inviteUrl);
+  } catch {
+    // Clipboard is a convenience only; the API still returns the URL.
+  }
 }

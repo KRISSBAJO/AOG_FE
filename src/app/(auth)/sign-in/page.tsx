@@ -56,12 +56,12 @@ export default function SignInPage() {
       subtitle="Sign in to your AOG Services workspace."
       footer={
         <>
-          Don&apos;t have an account?{" "}
+          Need access?{" "}
           <Link
-            href="/sign-up"
+            href="/accept-invite"
             className="font-semibold text-amber-600 hover:text-amber-700"
           >
-            Create one
+            Accept an invite
           </Link>
         </>
       }

@@ -1,11 +1,11 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Plus, RefreshCw, Search, Users } from "lucide-react";
+import { MailPlus, Plus, RefreshCw, Search, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusPill } from "@/components/dashboard/StatusPill";
-import { Button, Card, CardHeader, Input } from "@/components/ui";
+import { Button, Card, CardHeader, Checkbox, Input } from "@/components/ui";
 import { getErrorMessage } from "@/lib/api";
 import { Department, Employee, Skill, workforceApi } from "@/lib/api/workforce";
 import { toast } from "@/lib/toast";
@@ -48,6 +48,7 @@ export default function WorkforcePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [skillSaving, setSkillSaving] = useState(false);
+  const [inviteSavingId, setInviteSavingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [departmentForm, setDepartmentForm] = useState({
     name: "",
@@ -60,6 +61,7 @@ export default function WorkforcePage() {
     email: "",
     employmentType: "FULL_TIME",
     serviceLine: "CLEANING",
+    sendInvite: false,
   });
   const [skillForm, setSkillForm] = useState({
     name: "",
@@ -140,11 +142,22 @@ export default function WorkforcePage() {
       const employee = await workforceApi.createEmployee({
         ...payload,
       });
+
+      if (employeeForm.sendInvite && employee.email) {
+        const invite = await workforceApi.inviteEmployee(employee.id);
+        await copyInviteLink(invite.inviteUrl);
+        toast.success(
+          `Invite sent to ${invite.email}. The link was copied locally.`,
+          "Staff invite ready",
+        );
+      }
+
       setEmployeeForm((current) => ({
         ...current,
         firstName: "",
         lastName: "",
         email: "",
+        sendInvite: false,
       }));
       setAssignForm((current) => ({ ...current, employeeId: employee.id }));
       toast.success(
@@ -193,6 +206,28 @@ export default function WorkforcePage() {
     }
   }
 
+  async function inviteEmployee(employee: Employee) {
+    if (!employee.email) {
+      toast.error("Add an employee email before sending an invite.", "Email required");
+      return;
+    }
+
+    setInviteSavingId(employee.id);
+    try {
+      const invite = await workforceApi.inviteEmployee(employee.id);
+      await copyInviteLink(invite.inviteUrl);
+      toast.success(
+        `Invite sent to ${invite.email}. The link was copied locally.`,
+        "Staff invite ready",
+      );
+      await loadData(search);
+    } catch (err) {
+      toast.error(getErrorMessage(err), "Could not send invite");
+    } finally {
+      setInviteSavingId(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -233,6 +268,7 @@ export default function WorkforcePage() {
                   <th className="px-5 py-3 font-medium">Service lines</th>
                   <th className="px-5 py-3 font-medium">Skills</th>
                   <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">Portal</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -272,13 +308,29 @@ export default function WorkforcePage() {
                     <td className="px-5 py-3.5">
                       <StatusPill status={employee.status} />
                     </td>
+                    <td className="px-5 py-3.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        loading={inviteSavingId === employee.id}
+                        disabled={!employee.email}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void inviteEmployee(employee);
+                        }}
+                      >
+                        <MailPlus className="h-4 w-4" />
+                        {employee.userId ? "Resend" : "Invite"}
+                      </Button>
+                    </td>
                   </tr>
                 ))}
                 {!loading && employees.length === 0 && (
                   <tr>
                     <td
                       className="px-5 py-8 text-center text-slate-500"
-                      colSpan={6}
+                      colSpan={7}
                     >
                       No employees found.
                     </td>
@@ -381,6 +433,16 @@ export default function WorkforcePage() {
                     email: event.target.value,
                   }))
                 }
+              />
+              <Checkbox
+                checked={employeeForm.sendInvite}
+                onChange={(event) =>
+                  setEmployeeForm((current) => ({
+                    ...current,
+                    sendInvite: event.target.checked,
+                  }))
+                }
+                label="Give staff portal access and send invite"
               />
               <div className="grid grid-cols-2 gap-3">
                 <select
@@ -501,4 +563,12 @@ export default function WorkforcePage() {
       </div>
     </div>
   );
+}
+
+async function copyInviteLink(inviteUrl: string) {
+  try {
+    await navigator.clipboard.writeText(inviteUrl);
+  } catch {
+    // Clipboard is a convenience only; the API still returns the URL.
+  }
 }

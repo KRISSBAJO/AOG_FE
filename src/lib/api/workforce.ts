@@ -28,6 +28,7 @@ export type Certification = Skill & {
 
 export type Employee = {
   id: string;
+  userId?: string | null;
   employeeNumber: string;
   firstName: string;
   lastName: string;
@@ -59,6 +60,11 @@ export const workforceApi = {
     workspaceRequest<ListResponse<Employee>>(withQuery("/employees", query)),
   createEmployee: (input: Record<string, unknown>) =>
     workspaceRequest<Employee>("/employees", { method: "POST", body: jsonBody(input) }),
+  inviteEmployee: (employeeId: string) =>
+    workspaceRequest<{ email: string; displayName: string; role: string; inviteUrl: string; token?: string }>(
+      `/employees/${employeeId}/invite`,
+      { method: "POST", body: jsonBody({}) },
+    ),
   assignSkill: (employeeId: string, input: Record<string, unknown>) =>
     workspaceRequest(`/employees/${employeeId}/skills`, { method: "POST", body: jsonBody(input) }),
   assignCertification: (employeeId: string, input: Record<string, unknown>) =>

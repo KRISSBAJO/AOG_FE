@@ -162,10 +162,10 @@ export default function Header() {
               </Link>
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}>
                 <Link
-                  href="/sign-up"
+                  href="/contact"
                   className="inline-flex items-center rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold text-[#0B1120] shadow-lg shadow-amber-400/20 transition-colors hover:bg-amber-300"
                 >
-                  Get started
+                  Request service
                 </Link>
               </motion.div>
             </>

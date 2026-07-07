@@ -10,10 +10,32 @@ export type AuthUser = {
   displayName: string;
   phone?: string | null;
   isSiteAdmin: boolean;
+  status?: string;
   memberships?: Array<{
     workspaceId: string;
     workspace?: { id: string; name: string; slug?: string | null };
   }>;
+  userRoles?: Array<{
+    workspaceId: string;
+    role: {
+      id: string;
+      name: string;
+      permissions?: Array<{ permission?: { code: string } }>;
+    };
+  }>;
+  employeeProfile?: {
+    id: string;
+    employeeNumber: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+  customerContactProfile?: {
+    id: string;
+    customerId: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  } | null;
 };
 
 export type AuthResponse = {
@@ -26,6 +48,26 @@ export type AuthResponse = {
 export type ForgotPasswordResponse = {
   message: string;
   resetToken?: string;
+};
+
+export type InvitationInfo = {
+  email: string;
+  displayName: string;
+  phone?: string | null;
+  status: string;
+  workspace?: { id: string; name: string; slug?: string | null } | null;
+  customerContact?: {
+    id: string;
+    customerId: string;
+    customerName: string;
+    role: string;
+  } | null;
+  employee?: {
+    id: string;
+    employeeNumber: string;
+    firstName: string;
+    lastName: string;
+  } | null;
 };
 
 export function getActiveWorkspaceId() {
@@ -66,6 +108,25 @@ export function signUp(input: {
   password: string;
 }) {
   return apiRequest<AuthResponse>("/auth/sign-up", {
+    method: "POST",
+    body: JSON.stringify(input),
+    skipAuthRefresh: true,
+  });
+}
+
+export function getInvitation(token: string) {
+  return apiRequest<InvitationInfo>(`/auth/invitations/${encodeURIComponent(token)}`, {
+    skipAuthRefresh: true,
+  });
+}
+
+export function acceptInvite(input: {
+  token: string;
+  password: string;
+  displayName?: string;
+  phone?: string;
+}) {
+  return apiRequest<AuthResponse>("/auth/accept-invite", {
     method: "POST",
     body: JSON.stringify(input),
     skipAuthRefresh: true,

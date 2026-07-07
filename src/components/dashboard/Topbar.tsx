@@ -18,9 +18,9 @@ import {
 import {
   type AuthUser,
   clearAuthSession,
-  getMe,
   logout,
 } from "@/lib/auth";
+import type { NavSection } from "@/lib/dashboard-nav";
 import {
   communicationsApi,
   type Notification as AppNotification,
@@ -88,8 +88,12 @@ function resultMatchesModule(query: string): SearchResult[] {
     }));
 }
 
-async function searchWorkspace(query: string): Promise<SearchResult[]> {
+async function searchWorkspace(
+  query: string,
+  allowedModuleLabels: Set<string>,
+): Promise<SearchResult[]> {
   const take = 4;
+  const shouldSearch = (label: string) => allowedModuleLabels.has(label);
   const [
     customerResponse,
     facilityResponse,
@@ -99,20 +103,20 @@ async function searchWorkspace(query: string): Promise<SearchResult[]> {
     workOrderResponse,
     employeeResponse,
   ] = await Promise.allSettled([
-    phase3Api.listCustomers({ search: query, take }),
-    phase3Api.listFacilities({ search: query, take }),
-    phase3Api.listServices({ search: query, take }),
-    phase3Api.listContracts({ search: query, take }),
-    operationsApi.listServiceRequests({ search: query, take }),
-    operationsApi.listWorkOrders({ search: query, take }),
-    workforceApi.listEmployees({ search: query, take }),
+    shouldSearch("Customers") ? phase3Api.listCustomers({ search: query, take }) : Promise.resolve({ data: [] }),
+    shouldSearch("Facilities") ? phase3Api.listFacilities({ search: query, take }) : Promise.resolve({ data: [] }),
+    shouldSearch("Services") ? phase3Api.listServices({ search: query, take }) : Promise.resolve({ data: [] }),
+    shouldSearch("Contracts") ? phase3Api.listContracts({ search: query, take }) : Promise.resolve({ data: [] }),
+    shouldSearch("Service Requests") ? operationsApi.listServiceRequests({ search: query, take }) : Promise.resolve({ data: [] }),
+    shouldSearch("Work Orders") ? operationsApi.listWorkOrders({ search: query, take }) : Promise.resolve({ data: [] }),
+    shouldSearch("Workforce") ? workforceApi.listEmployees({ search: query, take }) : Promise.resolve({ data: [] }),
   ]);
 
   const fromSettled = <T,>(response: PromiseSettledResult<{ data: T[] }>) =>
     response.status === "fulfilled" ? response.value.data : [];
 
   const results: SearchResult[] = [
-    ...resultMatchesModule(query),
+    ...resultMatchesModule(query).filter((result) => allowedModuleLabels.has(result.label)),
     ...fromSettled(customerResponse).map((customer) => ({
       id: customer.id,
       label: customer.name,
@@ -167,11 +171,18 @@ async function searchWorkspace(query: string): Promise<SearchResult[]> {
   return results.slice(0, 12);
 }
 
-export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
+export function Topbar({
+  onOpenMenu,
+  user,
+  navSections,
+}: {
+  onOpenMenu: () => void;
+  user: AuthUser | null;
+  navSections: NavSection[];
+}) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(null);
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -179,23 +190,10 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-
-    getMe()
-      .then((profile) => {
-        if (active) setUser(profile);
-      })
-      .catch(() => {
-        clearAuthSession();
-        if (active) setUser(null);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const allowedModuleLabels = useMemo(
+    () => new Set(navSections.flatMap((section) => section.items.map((item) => item.label))),
+    [navSections],
+  );
 
   useEffect(() => {
     void loadNotifications();
@@ -216,7 +214,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
     const timer = window.setTimeout(async () => {
       setSearchLoading(true);
       try {
-        const results = await searchWorkspace(trimmed);
+        const results = await searchWorkspace(trimmed, allowedModuleLabels);
         if (active) {
           setSearchResults(results);
           setSearchOpen(true);
@@ -232,7 +230,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [query]);
+  }, [allowedModuleLabels, query]);
 
   const initials = useMemo(() => {
     const source = user?.displayName || user?.email || "AOG";
@@ -246,7 +244,6 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
 
   async function handleSignOut() {
     setMenuOpen(false);
-    setUser(null);
     await logout();
     router.replace("/sign-in");
   }

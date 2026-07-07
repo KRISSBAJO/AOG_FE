@@ -2,13 +2,14 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, RefreshCw, Search, UserRoundPlus } from "lucide-react";
+import { Plus, RefreshCw, Search, Send, UserRoundPlus } from "lucide-react";
 
-import { Alert, Button, Card, CardHeader, Input } from "@/components/ui";
+import { Alert, Button, Card, CardHeader, Checkbox, Input } from "@/components/ui";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusPill } from "@/components/dashboard/StatusPill";
 import { getErrorMessage } from "@/lib/api";
 import { Customer, phase3Api } from "@/lib/phase3-api";
+import { toast } from "@/lib/toast";
 
 const selectClass =
   "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40";
@@ -40,6 +41,7 @@ export default function CustomersPage() {
     title: "",
     role: "FACILITY_REPRESENTATIVE",
     isPrimary: true,
+    sendInvite: false,
   });
 
   const activeCustomers = useMemo(
@@ -110,12 +112,24 @@ export default function CustomersPage() {
     setError(null);
 
     try {
-      await phase3Api.createCustomerContact(selectedCustomerId, {
-        ...contactForm,
+      const { sendInvite, ...contactInput } = contactForm;
+      const contact = await phase3Api.createCustomerContact(selectedCustomerId, {
+        ...contactInput,
         email: contactForm.email || undefined,
         phone: contactForm.phone || undefined,
         title: contactForm.title || undefined,
+        canLogin: sendInvite,
       });
+
+      if (sendInvite && contact.email) {
+        const invite = await phase3Api.inviteCustomerContact(contact.id);
+        await copyInviteLink(invite.inviteUrl);
+        toast.success(
+          `Invite sent to ${invite.email}. The link was copied locally.`,
+          "Portal invite ready",
+        );
+      }
+
       setContactForm({
         firstName: "",
         lastName: "",
@@ -124,6 +138,7 @@ export default function CustomersPage() {
         title: "",
         role: "FACILITY_REPRESENTATIVE",
         isPrimary: true,
+        sendInvite: false,
       });
       await loadCustomers(search);
     } catch (err) {
@@ -345,6 +360,13 @@ export default function CustomersPage() {
                   setContactForm((form) => ({ ...form, title: event.target.value }))
                 }
               />
+              <Checkbox
+                checked={contactForm.sendInvite}
+                onChange={(event) =>
+                  setContactForm((form) => ({ ...form, sendInvite: event.target.checked }))
+                }
+                label="Give portal access and send invite"
+              />
               <Button
                 type="submit"
                 loading={contactSaving}
@@ -352,8 +374,12 @@ export default function CustomersPage() {
                 disabled={!selectedCustomerId}
                 variant="secondary"
               >
-                <UserRoundPlus className="h-4 w-4" />
-                Save contact
+                {contactForm.sendInvite ? (
+                  <Send className="h-4 w-4" />
+                ) : (
+                  <UserRoundPlus className="h-4 w-4" />
+                )}
+                {contactForm.sendInvite ? "Save and invite" : "Save contact"}
               </Button>
             </form>
           </Card>
@@ -361,4 +387,12 @@ export default function CustomersPage() {
       </div>
     </div>
   );
+}
+
+async function copyInviteLink(inviteUrl: string) {
+  try {
+    await navigator.clipboard.writeText(inviteUrl);
+  } catch {
+    // Clipboard is a convenience only; the API still returns the URL.
+  }
 }

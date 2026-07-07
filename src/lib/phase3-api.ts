@@ -33,6 +33,7 @@ export type Customer = {
 export type CustomerContact = {
   id: string;
   customerId: string;
+  userId?: string | null;
   firstName: string;
   lastName: string;
   email?: string | null;
@@ -40,6 +41,7 @@ export type CustomerContact = {
   title?: string | null;
   role: string;
   isPrimary: boolean;
+  canLogin?: boolean;
 };
 
 export type Facility = {
@@ -62,11 +64,22 @@ export type Facility = {
 export type FacilityContact = {
   id: string;
   facilityId: string;
+  customerContactId?: string | null;
   name: string;
   email?: string | null;
   phone?: string | null;
   role: string;
   isPrimary: boolean;
+};
+
+export type InviteResponse = {
+  email: string;
+  displayName: string;
+  role: string;
+  inviteUrl: string;
+  expiresAt: string;
+  token?: string;
+  target: string;
 };
 
 export type ServiceCategory = {
@@ -231,6 +244,11 @@ export const phase3Api = {
     }),
   deleteCustomerContact: (id: string) =>
     workspaceRequest<CustomerContact>(`/customer-contacts/${id}`, { method: "DELETE" }),
+  inviteCustomerContact: (id: string) =>
+    workspaceRequest<InviteResponse>(`/customer-contacts/${id}/invite`, {
+      method: "POST",
+      body: jsonBody({}),
+    }),
 
   listFacilities: (query?: Query) =>
     workspaceRequest<ListResponse<Facility>>(withQuery("/facilities", query)),
@@ -255,6 +273,11 @@ export const phase3Api = {
     }),
   deleteFacilityContact: (id: string) =>
     workspaceRequest<FacilityContact>(`/facility-contacts/${id}`, { method: "DELETE" }),
+  inviteFacilityContact: (id: string) =>
+    workspaceRequest<InviteResponse>(`/facility-contacts/${id}/invite`, {
+      method: "POST",
+      body: jsonBody({}),
+    }),
 
   listServiceCategories: (query?: Query) =>
     workspaceRequest<ListResponse<ServiceCategory>>(withQuery("/service-categories", query)),

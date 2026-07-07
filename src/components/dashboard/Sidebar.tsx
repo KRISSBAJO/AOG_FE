@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { Logo } from "@/components/ui";
-import { navSections } from "@/lib/dashboard-nav";
+import { navSections as defaultNavSections, type NavSection } from "@/lib/dashboard-nav";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,20 +17,22 @@ export function Sidebar({
   active = "Overview",
   collapsed = false,
   onToggleCollapsed,
+  sections = defaultNavSections,
 }: {
   open: boolean;
   onClose: () => void;
   active?: string;
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
+  sections?: NavSection[];
 }) {
   const sectionTitles = useMemo(
-    () => navSections.map((section) => section.title).filter(Boolean) as string[],
-    [],
+    () => sections.map((section) => section.title).filter(Boolean) as string[],
+    [sections],
   );
   const activeSection = useMemo(
-    () => navSections.find((section) => section.items.some((item) => item.label === active))?.title,
-    [active],
+    () => sections.find((section) => section.items.some((item) => item.label === active))?.title,
+    [active, sections],
   );
   const [openSections, setOpenSections] = useState<string[]>(() => (
     [activeSection ?? (sectionTitles.includes("Customer Ops") ? "Customer Ops" : sectionTitles[0])]
@@ -100,7 +102,7 @@ export function Sidebar({
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {navSections.map((section, sectionIndex) => {
+          {sections.map((section, sectionIndex) => {
             const title = section.title;
             const isOpen = !title || collapsed || openSections.includes(title);
 

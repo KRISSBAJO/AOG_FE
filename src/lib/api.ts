@@ -85,6 +85,8 @@ function shouldRefreshFor(path: string) {
   return ![
     "/auth/sign-in",
     "/auth/sign-up",
+    "/auth/invitations",
+    "/auth/accept-invite",
     "/auth/refresh",
     "/auth/logout",
     "/auth/forgot-password",
